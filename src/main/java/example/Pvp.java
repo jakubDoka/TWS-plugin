@@ -45,6 +45,9 @@ public class Pvp extends Plugin{
         Events.on(ServerLoadEvent.class,e->{
             updateState(1);
         });
+        Events.on(GameOverEvent.class,e->{
+            updateState(2);
+        });
         Events.on(PlayerConnect.class,e->{
             updateState(1);
         });
