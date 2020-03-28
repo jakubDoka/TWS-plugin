@@ -4,8 +4,10 @@ import arc.*;
 import arc.util.*;
 import mindustry.*;
 import mindustry.content.*;
+import mindustry.entities.EntityGroup;
 import mindustry.entities.type.*;
 import mindustry.game.EventType.*;
+import mindustry.game.Team;
 import mindustry.gen.*;
 import mindustry.plugin.Plugin;
 import arc.Events;
@@ -34,7 +36,6 @@ import java.awt.*;
 
 public class Pvp extends Plugin{
 
-    //register event handlers and create variables in the constructor
     public Pvp(){
         /*Events.on(BuildSelectEvent.class, event -> {
             if(!event.breaking && event.builder != null && event.builder.buildRequest() != null && event.builder.buildRequest().block == Blocks.thoriumReactor && event.builder instanceof Player){
@@ -42,24 +43,35 @@ public class Pvp extends Plugin{
                 Call.sendMessage("[scarlet]ALERT![] " + ((Player)event.builder).name + " has begun building a reactor at " + event.tile.x + ", " + event.tile.y);
             }
         });*/
-        Events.on(ServerLoadEvent.class,e->{
-            updateState(1);
-        });
-        Events.on(GameOverEvent.class,e->{
-            updateState(2);
-        });
-        Events.on(PlayerConnect.class,e->{
-            updateState(1);
-        });
-        Events.on(PlayerLeave.class,e->{
-            updateState(3);
+        Events.on(ServerLoadEvent.class,e-> updateState(null));
+        Events.on(WaveEvent.class,e-> updateState(null));
+        Events.on(PlayerConnect.class,e-> updateState(e.player));
 
-        });
     }
-    public void updateState(int count){
-        boolean start=playerGroup.size()>=count;
-        state.rules.waves=start;
-        state.rules.waveTimer=start;
+    public void updateState(Player player){
+        ArrayList<Player> players=new ArrayList<>();
+        for(Player p:playerGroup){
+            players.add(p);
+        }
+        if(player!=null) {
+            if (player.con.hasDisconnected) {
+                players.remove(player);
+            }else {
+                players.add(player);
+            }
+        }
+        int teamCount=0;
+        Team prevTeam=null;
+        for(Player p:players){
+            if(p.getTeam()==prevTeam){
+                continue;
+            }
+            Log.info(p.name);
+            prevTeam=p.getTeam();
+            teamCount++;
+        }
+        state.rules.waves= teamCount>1;
+        Call.onSetRules(state.rules);
     }
 
     @Override
