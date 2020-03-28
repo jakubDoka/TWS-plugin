@@ -43,21 +43,27 @@ public class Pvp extends Plugin{
                 Call.sendMessage("[scarlet]ALERT![] " + ((Player)event.builder).name + " has begun building a reactor at " + event.tile.x + ", " + event.tile.y);
             }
         });*/
-        Events.on(ServerLoadEvent.class,e-> updateState(null));
-        Events.on(WaveEvent.class,e-> updateState(null));
-        Events.on(PlayerConnect.class,e-> updateState(e.player));
+        Events.on(ServerLoadEvent.class,e-> updateState(null,false));
+        Events.on(WaveEvent.class,e-> updateState(null,false));
+        Events.on(WorldLoadEvent.class,e-> updateState(null,false));
+        Events.on(PlayerLeave.class,e-> updateState(e.player,false));
+        Events.on(PlayerConnect.class,e-> updateState(e.player,true));
+
 
     }
-    public void updateState(Player player){
+    public void updateState(Player player,boolean conected){
         ArrayList<Player> players=new ArrayList<>();
         for(Player p:playerGroup){
             players.add(p);
         }
         if(player!=null) {
-            if (player.con.hasDisconnected) {
-                players.remove(player);
-            }else {
+            if (conected) {
                 players.add(player);
+                Log.info("con");
+
+            }else {
+                players.remove(player);
+                Log.info("dis");
             }
         }
         int teamCount=0;
