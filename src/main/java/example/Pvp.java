@@ -33,6 +33,7 @@ import static java.lang.Math.sqrt;
 import static mindustry.Vars.*;
 
 import java.awt.*;
+import java.util.HashMap;
 
 public class Pvp extends Plugin{
 
@@ -47,32 +48,67 @@ public class Pvp extends Plugin{
         Events.on(WaveEvent.class,e-> updateState(null,false));
         Events.on(WorldLoadEvent.class,e-> updateState(null,false));
         Events.on(PlayerLeave.class,e-> updateState(e.player,false));
-        Events.on(PlayerConnect.class,e-> updateState(e.player,true));
+        Events.on(PlayerJoin.class,e-> {
+            updateState(e.player,true);
+            checkIfCrux(e.player);
+        });
 
 
     }
-    public void updateState(Player player,boolean conected){
+
+    public void checkIfCrux(Player player){
+        if(player.getTeam()==Team.crux){
+            Team smallestTeam=getSmallestTeam();
+            if(smallestTeam==null){
+               smallestTeam=Team.sharded;
+            }
+            player.setTeam(smallestTeam);
+        }
+    }
+
+    public Team getSmallestTeam(){
+        HashMap<Team,Integer> teamMap=new HashMap<>();
+        for(Player p:playerGroup){
+            Team pTeam=p.getTeam();
+            if (teamMap.containsKey(pTeam)){
+                teamMap.put(pTeam,teamMap.get(pTeam)+1);
+            }else{
+                teamMap.put(pTeam,1);
+            }
+        }
+        int smallest=1000;
+        Team smallestTeam=null;
+        for(Team t:teamMap.keySet()){
+            int thisT=teamMap.get(t);
+            Log.info(t.toString()+"/"+thisT);
+            if(thisT<smallest){
+                smallest=thisT;
+                smallestTeam=t;
+            }
+        }
+        return smallestTeam;
+    }
+
+    public void updateState(Player player,boolean connected){
         ArrayList<Player> players=new ArrayList<>();
         for(Player p:playerGroup){
             players.add(p);
         }
         if(player!=null) {
-            if (conected) {
+            if (connected) {
                 players.add(player);
-                Log.info("con");
 
             }else {
                 players.remove(player);
-                Log.info("dis");
             }
         }
         int teamCount=0;
         Team prevTeam=null;
         for(Player p:players){
+
             if(p.getTeam()==prevTeam){
                 continue;
             }
-            Log.info(p.name);
             prevTeam=p.getTeam();
             teamCount++;
         }
