@@ -1,41 +1,24 @@
 package example;
 
-import arc.*;
-import arc.util.*;
-import mindustry.*;
-import mindustry.content.*;
-import mindustry.entities.EntityGroup;
-import mindustry.entities.type.*;
-import mindustry.game.EventType.*;
-import mindustry.game.Team;
-import mindustry.gen.*;
-import mindustry.plugin.Plugin;
 import arc.Events;
 import arc.util.CommandHandler;
 import arc.util.Log;
 import arc.util.Timer;
-import mindustry.content.Blocks;
 import mindustry.entities.type.Player;
-import mindustry.game.EventType;
-import mindustry.game.Teams;
+import mindustry.game.EventType.*;
+import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.plugin.Plugin;
-import mindustry.type.Item;
-import mindustry.type.ItemType;
-import mindustry.world.Block;
-import mindustry.world.blocks.storage.CoreBlock;
 
-import java.io.*;
+
 import java.util.ArrayList;
-
-import static java.lang.Math.pow;
-import static java.lang.Math.sqrt;
-import static mindustry.Vars.*;
-
-import java.awt.*;
 import java.util.HashMap;
 
+import static mindustry.Vars.*;
+
 public class Pvp extends Plugin{
+
+    ArrayList<SwitchRequest> switchRequests=new ArrayList<>();
 
     public Pvp(){
         /*Events.on(BuildSelectEvent.class, event -> {
@@ -62,7 +45,8 @@ public class Pvp extends Plugin{
             if(smallestTeam==null){
                smallestTeam=Team.sharded;
             }
-            player.setTeam(smallestTeam);
+
+            changeTeam(player,smallestTeam);
         }
     }
 
@@ -116,11 +100,60 @@ public class Pvp extends Plugin{
         Call.onSetRules(state.rules);
     }
 
+    public static void changeTeam(Player p,Team t){
+        p.resetNoAdd();
+        p.setTeam(t);
+        p.add();
+    }
+
+    public Player findPlayer(String name){
+        for(Player p:playerGroup){
+            if(p.name.equals(name)){
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public Object findRequest(String name){
+        for(SwitchRequest sr:switchRequests){
+            if(sr.requested.name.equals(name)){
+                return sr;
+            }
+        }
+        return null;
+    }
     @Override
     public void registerServerCommands(CommandHandler handler){
     }
 
     @Override
     public void registerClientCommands(CommandHandler handler){
+        handler.register("switch-team","<player>","ask player from enemy team to switch teams",
+                (arg,p)->{
+            Player player=(Player) p;
+            Player other=findPlayer(arg[0]);
+            if (other==null){
+                player.sendMessage("[Scarlet][Server][]There is no player named "+arg[0]+".");
+                return;
+            }
+            if(player.getTeam()==other.getTeam()){
+                player.sendMessage("[Scarlet][Server][]You cannot switch with a player from your own team.");
+                return;
+            }
+            switchRequests.add(new SwitchRequest(player,other,switchRequests));
+        });
+        handler.register("request","<accept/deny>","accepts or denys any direct request.",
+                (arg,p)->{
+            Player player=(Player) p;
+            SwitchRequest request=(SwitchRequest)findRequest(player.name);
+            if(request==null){
+                player.sendMessage("[Scarlet][Server][]You have no direct requests.");
+                return;
+            }
+            request.handle(arg[0]);
+
+        });
     }
 }
+
