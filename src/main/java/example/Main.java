@@ -213,6 +213,13 @@ public class Main extends Plugin{
             factory.config();
             Log.info("Config applied.");
         });
+        handler.register("w-trans-time","<value>","Sets transport time.",arg->{
+            if(isNotInteger(arg[0])){
+                Log.info(arg[0]+" is not an integer.");
+                return;
+            }
+            transportTime=Integer.parseInt(arg[0]);
+                });
         handler.register("w","<target> <property> <value>","Sets property of target to value/integer.",arg->{
             if(!saveConfigReq.containsKey(arg[0])){
                 Log.info("Invalid target.Valid targets:"+saveConfigReq.keySet().toString());
