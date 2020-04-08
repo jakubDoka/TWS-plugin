@@ -17,6 +17,7 @@ ext{
 dependencies{
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
+    compile fileTree(include: ['*.jar'], dir: 'libs')
 }
 
 jar{
