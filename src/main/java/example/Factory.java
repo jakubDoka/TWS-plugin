@@ -82,11 +82,11 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
                     for(BaseUnit u:units){
                         u.add();
                     }
-                    Call.sendMessage(Main.prefix+Main.report(p.object,p.amount)+" units arrived.");
+                    Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" units arrived.");
                 }
             },this,p,true);
 
-            world.tile(p.x,p.y).removeNet();
+            world.tile(p.x/8,p.y/8).removeNet();
         }else{
             int[] thisUnitStats =stats.get(p.object);
             for (int i=0;i<Main.items.size();i++) {
@@ -98,7 +98,7 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
                 @Override
                 public void run() {
                     stats.get(p.object)[UNIT_COUNT]+=p.amount;
-                    Call.sendMessage(Main.prefix+Main.report(p.object,p.amount)+" wos finished and are waiting in a hangar.");
+                    Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" wos finished and are waiting in a hangar.");
                 }
             },this,p,false);
         }
@@ -216,6 +216,29 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
         }
         message.append("[orange]").append(freeThreads).append("[]threads are free.\n");
 
+        return message.toString();
+    }
+
+    public String price(Player player,String unitName,int amount){
+        if (!stats.containsKey(unitName)) {
+            player.sendMessage(Main.prefix+"There is no [scarlet]" + unitName + "[] only "+stats.keySet().toString()+".");
+            return null;
+        }
+        StringBuilder message= new StringBuilder();
+        message.append("[orange]--").append(amount).append(" ").append(unitName.toUpperCase()).append("--[]").append("\n\n");
+        message.append("in loadout / price\n");
+        for(int i=0;i<10;i++){
+            int inLoadout=loadout.storage[i];
+            int price=stats.get(unitName)[i];
+            if(price==0){
+                continue;
+            }
+            message.append(price>inLoadout ? "[red]":"[white]");
+            message.append(inLoadout).append(" [white]/ ").append((price*amount)).append(Main.itemIcons[i]).append("\n");
+        }
+        message.append("\n[scarlet]!!![]Factory will take resources from loadout not from the core[scarlet]!!![]\n");
+        message.append("Build time: [orange]").append(stats.get(unitName)[BUILD_TIME]).append("[].\n");
+        message.append("Factory can build [orange]").append(stats.get(unitName)[BUILD_LIMIT]).append("units at the same time.");
         return message.toString();
     }
 

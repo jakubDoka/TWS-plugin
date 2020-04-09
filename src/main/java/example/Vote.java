@@ -54,7 +54,11 @@ public class Vote implements Interruptible {
     }
 
     public int getRequired(){
-        return (int)Math.ceil(playerGroup.size()/2.0);
+        int count=playerGroup.size();
+        if(count==2){
+            return 2;
+        }
+        return (int)Math.ceil(count/2.0);
     }
 
     public void addVote(Player player,int vote){

@@ -3,10 +3,12 @@ package example;
 import arc.Events;
 import arc.util.CommandHandler;
 import arc.util.Log;
+import mindustry.content.Blocks;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.base.BuilderDrone;
 import mindustry.game.EventType;
 import mindustry.game.EventType.*;
+import mindustry.game.Teams;
 import mindustry.gen.Call;
 import mindustry.plugin.Plugin;
 import mindustry.type.Item;
@@ -17,6 +19,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import mindustry.world.Block;
+import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -26,11 +30,7 @@ import static java.lang.Math.sqrt;
 import static mindustry.Vars.*;
 
 public class Main extends Plugin{
-
-    static final String SAVE="save";
-    static final String CONFIG="config";
     static final String ALL="all";
-    static final String configFile="config.json";
     static final String saveFile="save.json";
     static final String directory="config/mods/The_Worst/";
     static final String prefix="[scarlet][Server][]";
@@ -45,6 +45,7 @@ public class Main extends Plugin{
 
     Loadout loadout;
     Factory factory;
+    CoreBuilder builder;
     Vote vote;
 
 
@@ -86,6 +87,7 @@ public class Main extends Plugin{
             load_items();
             loadout=new Loadout();
             factory=new Factory(loadout);
+            builder=new CoreBuilder();
             vote=new Vote();
             interruptibles.add(loadout);
             interruptibles.add(factory);
@@ -201,14 +203,44 @@ public class Main extends Plugin{
         }
     }
 
+    public static int getStorageSize(Player player){
+        int size=0;
+       for(CoreBlock.CoreEntity c:player.getTeam().cores()){
+           size+=c.block.itemCapacity;
+       }
+       return size;
+    }
+
+    public void build_core(int cost, Player player, Block core_type){
+        boolean can_build=true;
+        Teams.TeamData teamData = state.teams.get(player.getTeam());
+        CoreBlock.CoreEntity core = teamData.cores.first();
+        for(Item item:items){
+            if (!core.items.has(item, cost)) {
+                can_build=false;
+                player.sendMessage("[scarlet]" + item.name + ":" + core.items.get(item) +"/"+ cost);
+            }
+        }
+        if(can_build) {
+            Call.onConstructFinish(world.tile(player.tileX(), player.tileY()), core_type, 0, (byte) 0, player.getTeam(), false);
+            if (world.tile(player.tileX(), player.tileY()).block() == core_type) {
+                player.sendMessage("[green]Core spawned!");
+                Call.sendMessage("[scarlet][Server][]Player [green]"+player.name+" []has taken a portion of resources to build a core!");
+                for(Item item:items){
+                    core.items.remove(item, cost);
+                }
+            } else {
+                player.sendMessage("[scarlet][Server]Core spawn failed!Invalid placement!");
+            }
+            return;
+        }
+        player.sendMessage("[scarlet][Server]Core spawn failed!Not enough resorces.");
+    }
+    
     @Override
     public void registerServerCommands(CommandHandler handler){
-        handler.register("w-load","Reloads theWorst saved data.",arg->{
-            load();
-        });
-        handler.register("w-save","Saves theWorst data.",arg->{
-            save();
-        });
+        handler.register("w-load","Reloads theWorst saved data.",arg-> load());
+        handler.register("w-save","Saves theWorst data.",arg-> save());
         handler.register("w-apply-config","Applies the factory configuration.",arg->{
             factory.config();
             Log.info("Config applied.");
@@ -259,7 +291,7 @@ public class Main extends Plugin{
                     "launch to "+where);
         });
 
-        handler.<Player>register("f","<build/send> <itemName/all> [unitAmount]","."
+        handler.<Player>register("f","<build/send> <unitName/all> [unitAmount]","."
                 ,(arg, player) -> {
             boolean send=arg[0].equals("send");
             Package p=factory.verify(player,arg[1],arg.length==3 ? arg[2]:"1" ,send);
@@ -269,5 +301,93 @@ public class Main extends Plugin{
             String what=send ? "send":"build";
             vote.aVote(factory, p,what+" "+report(p.object,p.amount)+".", what);
         });
+        handler.<Player>register("f-price","<unitName> [unitAmount]",
+                "Shows price of given amount of units.",(arg,player)->{
+            int amount=arg.length==1 || isNotInteger(arg[1]) ? 1:Integer.parseInt(arg[1]);
+            Call.onInfoMessage(player.con,factory.price(player,arg[0],amount));
+        });
+
+        handler.<Player>register("build-core","<small/normal/big>", "Makes new core", (arg, player) -> {
+            Package p=builder.verify(player,arg[0],"0" ,true);
+            if (p==null){
+                return;
+            }
+            vote.aVote(builder, p,"building "+arg[0]+" core.","core build");
+        });
+    }
+}
+class CoreBuilder implements Requester{
+    @Override
+    public ArrayList<Request> getRequests() {
+        return null;
+    }
+
+    @Override
+    public void fail(String object, int amount) {
+
+    }
+
+    @Override
+    public String getProgress(Request request) {
+        return null;
+    }
+
+    @Override
+    public void launch(Package p) {
+        Block to_build = Blocks.coreShard;
+        switch(p.object){
+            case "normal":
+                to_build = Blocks.coreFoundation;
+
+                break;
+            case "big":
+                to_build = Blocks.coreNucleus;
+                break;
+        }
+        build_core(p.amount,p.target,to_build,p.x,p.y);
+    }
+
+    @Override
+    public Package verify(Player player, String object, String sAmount, boolean toBase) {
+        if(!object.equals("big") && !object.equals("normal") && !object.equals("small")){
+            player.sendMessage(Main.prefix+"Invalid argument.");
+            return null;
+        }
+
+        int storage=Main.getStorageSize(player);
+        int cost=(int)(storage*.20f);
+        switch(object){
+            case "normal":
+                cost=(int)(storage*.35f);
+                break;
+            case "big":
+                cost=(int)(storage*.50f);
+                break;
+        }
+        boolean can_build=true;
+        CoreBlock.CoreEntity core=Loadout.getCore(player);
+        for(Item item:Main.items){
+            if (!core.items.has(item, cost)) {
+                can_build=false;
+                player.sendMessage("[scarlet]" + item.name + ":" + core.items.get(item) +"/"+ cost);
+            }
+        }
+        if(!can_build){
+            return null;
+        }
+        return new Package(object,cost,toBase,player,player.tileX(),player.tileY());
+    }
+
+    public void build_core(int cost, Player player, Block core_type ,int x,int y){
+        CoreBlock.CoreEntity core = Loadout.getCore(player);
+        Call.onConstructFinish(world.tile(x,y), core_type, 0, (byte) 0, player.getTeam(), false);
+        if (world.tile(player.tileX(), player.tileY()).block() == core_type) {
+            Call.sendMessage(Main.prefix+"Player [green]"+player.name+" []has taken a portion of resources to build a core!");
+            for(Item item:Main.items){
+                core.items.remove(item, cost);
+            }
+        } else {
+            player.sendMessage(Main.prefix+"Core spawn failed!Invalid placement!");
+        }
     }
 }

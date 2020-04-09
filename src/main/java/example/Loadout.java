@@ -91,7 +91,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         Timer.Task task;
         Item targetItem=getItemByName(p.object);
         CoreBlock.CoreEntity core = getCore(p.target);
-        int amount=get_transport_amount(targetItem,p.amount,core,p.toBase);
+        int amount=getTransportAmount(targetItem,p.amount,core,p.toBase);
         int idx=getItemIdx(targetItem);
         if(p.toBase){
 
@@ -101,7 +101,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
                 @Override
                 public void run() {
                     core.items.add(targetItem, finalAmount);
-                    Call.sendMessage(Main.prefix+Main.report(p.object,p.amount)+" arrived to core.");
+                    Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" arrived to core.");
                 }
             };
             requests.add(new Request(Main.transportTime,task,this,p,true));
@@ -109,7 +109,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             if(amount==-1){
                 idx=0;
                 for(Item i:Main.items){
-                    amount=get_transport_amount(i,p.amount,core,p.toBase);
+                    amount=getTransportAmount(i,p.amount,core,p.toBase);
                     core.items.remove(i,amount);
                     storage[idx]+=amount;
                     idx++;
@@ -119,7 +119,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
                 storage[idx]+=amount;
 
             }
-            Call.sendMessage(Main.prefix+Main.report(p.object,p.amount)+" arrived to loadout.");
+            Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" arrived to loadout.");
         }
     }
 
@@ -140,7 +140,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         }
         int amount=Integer.parseInt(sAmount);
         CoreBlock.CoreEntity core = getCore(player);
-        if(get_transport_amount(targetItem,amount,core,toBase)==0){
+        if(getTransportAmount(targetItem,amount,core,toBase)==0){
             player.sendMessage(Main.prefix+"Nothing to transport.");
             return null;
         }
@@ -148,13 +148,13 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         return new Package(object,amount,toBase,player);
     }
 
-    public CoreBlock.CoreEntity getCore(Player p){
+    public static CoreBlock.CoreEntity getCore(Player p){
         Teams.TeamData teamData = state.teams.get(p.getTeam());
         return teamData.cores.first();
     }
 
 
-    public int get_transport_amount(Item item, int amount, CoreBlock.CoreEntity core, boolean toBase){
+    public int getTransportAmount(Item item, int amount, CoreBlock.CoreEntity core, boolean toBase){
         if(item==null){
             return -1;
         }
