@@ -216,32 +216,6 @@ public class Main extends Plugin{
        }
        return size;
     }
-
-    public void build_core(int cost, Player player, Block core_type){
-        boolean can_build=true;
-        Teams.TeamData teamData = state.teams.get(player.getTeam());
-        CoreBlock.CoreEntity core = teamData.cores.first();
-        for(Item item:items){
-            if (!core.items.has(item, cost)) {
-                can_build=false;
-                player.sendMessage("[scarlet]" + item.name + ":" + core.items.get(item) +"/"+ cost);
-            }
-        }
-        if(can_build) {
-            Call.onConstructFinish(world.tile(player.tileX(), player.tileY()), core_type, 0, (byte) 0, player.getTeam(), false);
-            if (world.tile(player.tileX(), player.tileY()).block() == core_type) {
-                player.sendMessage("[green]Core spawned!");
-                Call.sendMessage("[scarlet][Server][]Player [green]"+player.name+" []has taken a portion of resources to build a core!");
-                for(Item item:items){
-                    core.items.remove(item, cost);
-                }
-            } else {
-                player.sendMessage("[scarlet][Server]Core spawn failed!Invalid placement!");
-            }
-            return;
-        }
-        player.sendMessage("[scarlet][Server]Core spawn failed!Not enough resorces.");
-    }
     
     @Override
     public void registerServerCommands(CommandHandler handler){
@@ -279,6 +253,8 @@ public class Main extends Plugin{
 
     @Override
     public void registerClientCommands(CommandHandler handler){
+        handler.removeCommand("vote");
+
         handler.<Player>register("l-info","Shows how mani resource you have stored in the loadout and " +
                         "traveling progress.",(arg, player) -> Call.onInfoMessage(player.con,loadout.info()));
 
@@ -309,6 +285,7 @@ public class Main extends Plugin{
             String what=send ? "send":"build";
             vote.aVote(factory, p,what+" "+report(p.object,p.amount)+".", what);
         });
+
         handler.<Player>register("f-price","<unitName> [unitAmount]",
                 "Shows price of given amount of units.",(arg,player)->{
             int amount=arg.length==1 || isNotInteger(arg[1]) ? 1:Integer.parseInt(arg[1]);
@@ -322,18 +299,23 @@ public class Main extends Plugin{
             }
             vote.aVote(builder, p,"building "+arg[0]+" core.","core build");
         });
+
         handler.<Player>register("vote","<map/skipwave> [index/name/waveAmount]","",(arg, player) -> {
             Package p = null;
+            String secArg=arg.length==2 ? arg[1]:"0";
             switch (arg[0]){
                 case "map":
-                    p = changer.verify(player,arg[1],null,false);
+                    p = changer.verify(player,secArg,null,false);
                     if(p==null) return;
                     vote.aVote(changer,p,"changing map to "+p.map.name()+". ","map change");
                     return;
                 case "skipwave":
-                    if(isInvalidArg(player,"Wave amount",arg[1])) return;
-                    p= skipper.verify(player,null,arg[1],false);
+                    if(isInvalidArg(player,"Wave amount",secArg)) return;
+                    p= skipper.verify(player,null,secArg,false);
                     vote.aVote(skipper,p,"skipping "+p.amount+" waves. ","wave skip");
+                    return;
+                default:
+                    player.sendMessage(prefix+"Invalid first argument.");
             }
         });
     }

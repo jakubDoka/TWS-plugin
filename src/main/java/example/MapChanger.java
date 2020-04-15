@@ -34,8 +34,7 @@ public class MapChanger implements Votable{
         if(Main.isNotInteger(object)){
            map= mapList.find(m -> m.name().equalsIgnoreCase(object.replace('_', ' '))
                    || m.name().equalsIgnoreCase(object));
-        }
-        else {
+        } else {
             int idx=Integer.parseInt(object);
             if(idx<mapList.size){
                 map = mapList.get(idx);

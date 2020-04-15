@@ -119,7 +119,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
                 storage[idx]+=amount;
 
             }
-            Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" arrived to loadout.");
+            Call.sendMessage(Main.prefix+"[green][orange]" + (p.object.equals("all") ? p.amount+" of all":amount+" "+p.object) +"[] arrived to loadout.");
         }
     }
 
