@@ -14,7 +14,7 @@ import java.util.HashMap;
 import static mindustry.Vars.state;
 
 
-public class Loadout extends Requesting implements Requester, Interruptible, LoadSave {
+public class Loadout extends Requesting implements Requester, Interruptible, LoadSave,Votable {
 
     int[] storage=new int[10];
 
@@ -132,10 +132,6 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         Item targetItem=getItemByName(object);
         if(targetItem==null && !(object.equals(Main.ALL) && !toBase)){
             player.sendMessage(Main.prefix+"The [scarlet] "+object+"[] doesn't exist.");
-            return null;
-        }
-        if(Main.isNotInteger(sAmount)){
-            player.sendMessage(Main.prefix+"The [scarlet] "+sAmount+"[] is not a number.");
             return null;
         }
         int amount=Integer.parseInt(sAmount);

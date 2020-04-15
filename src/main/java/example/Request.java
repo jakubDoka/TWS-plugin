@@ -5,7 +5,7 @@ import arc.util.Timer;
 public class Request implements Interruptible {
     int time;
     
-    boolean stoppable=true;
+    boolean stoppable;
     Timer.Task task;
     Timer.Task terminateTask;
     Requester requester;

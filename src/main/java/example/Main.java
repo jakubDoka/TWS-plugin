@@ -3,7 +3,6 @@ package example;
 import arc.Events;
 import arc.util.CommandHandler;
 import arc.util.Log;
-import mindustry.content.Blocks;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.base.BuilderDrone;
 import mindustry.game.EventType;
@@ -43,10 +42,12 @@ public class Main extends Plugin{
     static ArrayList<Item> items=new ArrayList<>();
     ArrayList<Interruptible> interruptibles=new ArrayList<>();
 
-    Loadout loadout;
-    Factory factory;
-    CoreBuilder builder;
-    Vote vote;
+    Loadout loadout=new Loadout();
+    Factory factory=new Factory(loadout);
+    CoreBuilder builder=new CoreBuilder();
+    MapChanger changer=new MapChanger();
+    WaveSkipper skipper=new WaveSkipper();
+    Vote vote=new Vote();
 
 
     public Main(){
@@ -85,10 +86,7 @@ public class Main extends Plugin{
 
         Events.on(ServerLoadEvent.class,e->{
             load_items();
-            loadout=new Loadout();
-            factory=new Factory(loadout);
-            builder=new CoreBuilder();
-            vote=new Vote();
+
             interruptibles.add(loadout);
             interruptibles.add(factory);
             interruptibles.add(vote);
@@ -175,6 +173,14 @@ public class Main extends Plugin{
 
     public static void missingPropertyError(String address){
         Log.err(address+" is missing.Property will be set to default value.");
+    }
+
+    public static boolean isInvalidArg(Player player,String what,String agr){
+        if(isNotInteger(agr)){
+            player.sendMessage(prefix+what+" has to be integer.[scarlet]"+ agr +"[] is not.");
+            return true;
+        }
+        return false;
     }
 
     public static Integer getInt(Object integer){
@@ -281,6 +287,7 @@ public class Main extends Plugin{
 
         handler.<Player>register("l","<fill/use> <itemName/all> <itemAmount>","."
                 ,(arg, player) -> {
+            if(isInvalidArg(player,"Item amount",arg[1])) return;
             boolean use=arg[0].equals("use");
             Package p=loadout.verify(player,arg[1],arg[2],use);
             if (p==null){
@@ -293,6 +300,7 @@ public class Main extends Plugin{
 
         handler.<Player>register("f","<build/send> <unitName/all> [unitAmount]","."
                 ,(arg, player) -> {
+                    if(isInvalidArg(player,"Unit amount",arg[1])) return;
             boolean send=arg[0].equals("send");
             Package p=factory.verify(player,arg[1],arg.length==3 ? arg[2]:"1" ,send);
             if (p==null){
@@ -314,80 +322,19 @@ public class Main extends Plugin{
             }
             vote.aVote(builder, p,"building "+arg[0]+" core.","core build");
         });
-    }
-}
-class CoreBuilder implements Requester{
-    @Override
-    public ArrayList<Request> getRequests() {
-        return null;
-    }
-
-    @Override
-    public void fail(String object, int amount) {
-
-    }
-
-    @Override
-    public String getProgress(Request request) {
-        return null;
-    }
-
-    @Override
-    public void launch(Package p) {
-        Block to_build = Blocks.coreShard;
-        switch(p.object){
-            case "normal":
-                to_build = Blocks.coreFoundation;
-
-                break;
-            case "big":
-                to_build = Blocks.coreNucleus;
-                break;
-        }
-        build_core(p.amount,p.target,to_build,p.x,p.y);
-    }
-
-    @Override
-    public Package verify(Player player, String object, String sAmount, boolean toBase) {
-        if(!object.equals("big") && !object.equals("normal") && !object.equals("small")){
-            player.sendMessage(Main.prefix+"Invalid argument.");
-            return null;
-        }
-
-        int storage=Main.getStorageSize(player);
-        int cost=(int)(storage*.20f);
-        switch(object){
-            case "normal":
-                cost=(int)(storage*.35f);
-                break;
-            case "big":
-                cost=(int)(storage*.50f);
-                break;
-        }
-        boolean can_build=true;
-        CoreBlock.CoreEntity core=Loadout.getCore(player);
-        for(Item item:Main.items){
-            if (!core.items.has(item, cost)) {
-                can_build=false;
-                player.sendMessage("[scarlet]" + item.name + ":" + core.items.get(item) +"/"+ cost);
+        handler.<Player>register("vote","<map/skipwave> [index/name/waveAmount]","",(arg, player) -> {
+            Package p = null;
+            switch (arg[0]){
+                case "map":
+                    p = changer.verify(player,arg[1],null,false);
+                    if(p==null) return;
+                    vote.aVote(changer,p,"changing map to "+p.map.name()+". ","map change");
+                    return;
+                case "skipwave":
+                    if(isInvalidArg(player,"Wave amount",arg[1])) return;
+                    p= skipper.verify(player,null,arg[1],false);
+                    vote.aVote(skipper,p,"skipping "+p.amount+" waves. ","wave skip");
             }
-        }
-        if(!can_build){
-            return null;
-        }
-        return new Package(object,cost,toBase,player,player.tileX(),player.tileY());
-    }
-
-    public void build_core(int cost, Player player, Block core_type ,int x,int y){
-        CoreBlock.CoreEntity core = Loadout.getCore(player);
-        Call.onConstructFinish(world.tile(x,y), core_type, 0, (byte) 0, player.getTeam(), false);
-        if (world.tile(player.tileX(), player.tileY()).block() == core_type) {
-            Call.sendMessage(Main.prefix+"Player [green]"+player.name+" []has taken a portion of resources to build a core!");
-            for(Item item:Main.items){
-                core.items.remove(item, cost);
-            }
-        } else {
-            player.sendMessage(Main.prefix+"Core spawn failed!Invalid placement!");
-        }
+        });
     }
 }

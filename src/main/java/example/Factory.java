@@ -21,7 +21,7 @@ import org.json.simple.parser.ParseException;
 
 import static mindustry.Vars.*;
 
-public class Factory extends Requesting implements Requester,Interruptible, LoadSave {
+public class Factory extends Requesting implements Requester,Interruptible, LoadSave,Votable {
     final int BUILD_LIMIT=10;
     final int BUILD_TIME=11;
     final int UNIT_COUNT=12;
@@ -113,10 +113,6 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
         }
         if(!stats.containsKey(object) && !(object.equals(Main.ALL) && toBase)){
             player.sendMessage(Main.prefix+"Factory cannot build nor send [scarlet] "+object+"[].");
-            return null;
-        }
-        if(Main.isNotInteger(sAmount)){
-            player.sendMessage(Main.prefix+"The [scarlet] "+sAmount+"[] is not a number.");
             return null;
         }
         UnitType targetUnit=getUnitByName(object);

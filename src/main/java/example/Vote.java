@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import static mindustry.Vars.*;
 
 public class Vote implements Interruptible {
-    Requester requester;
+    Votable votable;
     Package aPackage;
 
     String report;
@@ -26,12 +26,12 @@ public class Vote implements Interruptible {
     int alertIdx=0;
     int votes=0;
 
-    public void aVote(Requester requester, Package aPackage, String message,String report){
+    public void aVote(Votable votable, Package aPackage, String message,String report){
         if(voting){
             aPackage.target.sendMessage(Main.prefix+"Vote in process.");
             return;
         }
-        this.requester=requester;
+        this.votable=votable;
         this.aPackage=aPackage;
         this.report=report;
         alertIdx=0;
@@ -85,7 +85,7 @@ public class Vote implements Interruptible {
         String result=Main.prefix+"vote-"+report;
         if(success){
             result+="-done";
-            requester.launch(aPackage);
+            votable.launch(aPackage);
         }else {
             result+="-failed";
         }
