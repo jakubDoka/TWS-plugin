@@ -161,13 +161,8 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
         return new Package(object,amount,false,player);
     }
 
-    public UnitType getUnitByName(String name){
-        for(UnitType u:content.units()){
-            if(u.name.equals(name)){
-                return u;
-            }
-        }
-        return null;
+    public static UnitType getUnitByName(String name){
+        return content.units().find(unitType -> unitType.name.equals(name));
     }
 
     public int getUnitCount(String key){

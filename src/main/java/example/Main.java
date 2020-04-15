@@ -3,10 +3,12 @@ package example;
 import arc.Events;
 import arc.util.CommandHandler;
 import arc.util.Log;
+import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.base.BuilderDrone;
 import mindustry.game.EventType;
 import mindustry.game.EventType.*;
+import mindustry.game.Team;
 import mindustry.game.Teams;
 import mindustry.gen.Call;
 import mindustry.plugin.Plugin;
@@ -18,6 +20,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import mindustry.type.UnitType;
 import mindustry.world.Block;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
@@ -43,7 +46,7 @@ public class Main extends Plugin{
     ArrayList<Interruptible> interruptibles=new ArrayList<>();
 
     Loadout loadout=new Loadout();
-    Factory factory=new Factory(loadout);
+    Factory factory;
     CoreBuilder builder=new CoreBuilder();
     MapChanger changer=new MapChanger();
     WaveSkipper skipper=new WaveSkipper();
@@ -86,7 +89,7 @@ public class Main extends Plugin{
 
         Events.on(ServerLoadEvent.class,e->{
             load_items();
-
+            factory=new Factory(loadout);
             interruptibles.add(loadout);
             interruptibles.add(factory);
             interruptibles.add(vote);
@@ -95,6 +98,7 @@ public class Main extends Plugin{
             if(!makeDir()){
                 Log.info("Unable to create directory "+directory+".");
             }
+
             load();
         });
 
@@ -193,9 +197,13 @@ public class Main extends Plugin{
     }
 
     public static Player findPlayer(String name){
-        for(Player p:playerGroup){
-            if(p.name.equals(name)){
-                return p;
+        return playerGroup.find(p->p.name.equals(name));
+    }
+
+    public static Team getTeamByName(String name){
+        for(Team t:Team.all()){
+            if(t.name.equals(name)){
+                return t;
             }
         }
         return null;
@@ -220,11 +228,41 @@ public class Main extends Plugin{
     @Override
     public void registerServerCommands(CommandHandler handler){
         handler.register("w-load","Reloads theWorst saved data.",arg-> load());
+
         handler.register("w-save","Saves theWorst data.",arg-> save());
+
+        handler.register("spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
+            if(playerGroup.size()==0){
+                Log.info("there is no one logged,why bother spawning units?");
+            }
+            UnitType unitType=Factory.getUnitByName(arg[0]);
+            if(unitType==null){
+                Log.info(arg[0]+" is not valid unit.");
+                return;
+            }
+            if(isNotInteger(arg[1])){
+                Log.info("count has to be integer.");
+                return;
+            }
+            int count=Integer.parseInt(arg[1]);
+            Player player=findPlayer(arg[2]);
+            if(player==null){
+                Log.info("Player not found.");
+                return;
+            }
+            Team team=arg.length>3 ? getTeamByName( arg[3]):Team.crux;
+            for(int i=0;i<count;i++){
+                BaseUnit unit=unitType.create(team);
+                unit.set(player.x,player.y);
+                unit.add();
+            }
+        });
+
         handler.register("w-apply-config","Applies the factory configuration.",arg->{
             factory.config();
             Log.info("Config applied.");
         });
+
         handler.register("w-trans-time","<value>","Sets transport time.",arg->{
             if(isNotInteger(arg[0])){
                 Log.info(arg[0]+" is not an integer.");
@@ -232,6 +270,7 @@ public class Main extends Plugin{
             }
             transportTime=Integer.parseInt(arg[0]);
                 });
+
         handler.register("w","<target> <property> <value>","Sets property of target to value/integer.",arg->{
             if(!saveConfigReq.containsKey(arg[0])){
                 Log.info("Invalid target.Valid targets:"+saveConfigReq.keySet().toString());
@@ -263,7 +302,7 @@ public class Main extends Plugin{
 
         handler.<Player>register("l","<fill/use> <itemName/all> <itemAmount>","."
                 ,(arg, player) -> {
-            if(isInvalidArg(player,"Item amount",arg[1])) return;
+            if(isInvalidArg(player,"Item amount",arg[2])) return;
             boolean use=arg[0].equals("use");
             Package p=loadout.verify(player,arg[1],arg[2],use);
             if (p==null){
@@ -276,7 +315,7 @@ public class Main extends Plugin{
 
         handler.<Player>register("f","<build/send> <unitName/all> [unitAmount]","."
                 ,(arg, player) -> {
-                    if(isInvalidArg(player,"Unit amount",arg[1])) return;
+            if(isInvalidArg(player,"Unit amount",arg[2])) return;
             boolean send=arg[0].equals("send");
             Package p=factory.verify(player,arg[1],arg.length==3 ? arg[2]:"1" ,send);
             if (p==null){
@@ -293,7 +332,7 @@ public class Main extends Plugin{
         });
 
         handler.<Player>register("build-core","<small/normal/big>", "Makes new core", (arg, player) -> {
-            Package p=builder.verify(player,arg[0],"0" ,true);
+            Package p=builder.verify(player,arg[0],null ,true);
             if (p==null){
                 return;
             }
