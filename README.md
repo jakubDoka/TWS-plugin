@@ -1,15 +1,13 @@
-### Setup
+# The worst mindustry plugin 2 
 
-Clone this repository first.
-To edit the plugin display name and other data, take a look at `src/main.resources/plugin.json`.
-Edit the name of the project itself by going into `settings.gradle`.
+### Content
 
-### Basic Usage
+This plugin implements loadout system.Players can launch resources and store them for later use.
+Plugin also implements a unit factory witch aleuts players to units from resources from loadout. 
+Then there is also command for building cores for resources.
 
-See `src/main/java/example/ExamplePlugin.java` for some basic commands and event handlers.  
-Every main plugin class must extend `Plugin`. Make sure that `plugin.json` points to the correct main plugin class.
-
-Please note that the plugin system is in beta, and as such is subject to changes.
+Plugin will create a default config and save file. In a config ,you can set up witch units can be built, 
+how match will they cost and speed of building. Save saves the loadout and factory progress.
 
 ### Building a Jar
 
@@ -17,9 +15,12 @@ Please note that the plugin system is in beta, and as such is subject to changes
 
 Output jar should be in `build/libs`.
 
-
 ### Installing
 
 Simply place the output jar from the step above in your server's `config/mods` directory and restart the server.
 List your currently installed plugins/mods by running the `mods` command.
-"# The_worst_mindustry_plugin_2" 
+
+### Bugs
+
+This plugin is far from done and can contain some bugs, if you find some please report them in issues.
+The best way to report bug is explanation of how to recreate it.
