@@ -318,11 +318,13 @@ public class Main extends Plugin {
                     "launch to " + where);
         });
 
-        handler.<Player>register("f", "<build/send> <unitName/all> [unitAmount]", ".",
+        handler.<Player>register("f", "<build/send> <unitName/all> [unitAmount]",
+                "Build amount of unit or Send amount of units from hangar.",
                 (arg, player) -> {
-            if (isInvalidArg(player, "Unit amount", arg[2])) return;
+            String thirdArg = arg.length == 3 ? arg[2] : "1";
+            if (isInvalidArg(player, "Unit amount", thirdArg)) return;
             boolean send = arg[0].equals("send");
-            Package p = factory.verify(player, arg[1], arg.length == 3 ? arg[2] : "1", send);
+            Package p = factory.verify(player, arg[1],thirdArg, send);
             if (p == null) {
                 return;
             }
@@ -345,7 +347,7 @@ public class Main extends Plugin {
             vote.aVote(builder, p, "building " + arg[0] + " core. ", "core build");
         });
 
-        handler.<Player>register("vote", "<map/skipwave/restart/gameover> [index/name/waveAmount]", "Opens vote session.",
+        handler.<Player>register("vote", "<map/skipwave/restart/gameover> [indexOrName/waveAmount]", "Opens vote session.",
                 (arg, player) -> {
             Package p;
             String secArg = arg.length == 2 ? arg[1] : "0";
@@ -367,6 +369,7 @@ public class Main extends Plugin {
                 case "gameover":
                     vote.aVote(changer, new Package(null ,null, player),
                             "gameover. ", "gameover");
+                    return;
                 default:
                     player.sendMessage(prefix + "Invalid first argument.");
             }
