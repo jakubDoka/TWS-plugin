@@ -1,4 +1,4 @@
-package example;
+package theWorst;
 
 import arc.Events;
 import arc.util.CommandHandler;
@@ -9,7 +9,6 @@ import mindustry.entities.type.base.BuilderDrone;
 import mindustry.game.EventType;
 import mindustry.game.EventType.*;
 import mindustry.game.Team;
-import mindustry.game.Teams;
 import mindustry.gen.Call;
 import mindustry.plugin.Plugin;
 import mindustry.type.Item;
@@ -21,28 +20,35 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import mindustry.type.UnitType;
-import mindustry.world.Block;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import theWorst.helpers.CoreBuilder;
+import theWorst.helpers.MapChanger;
+import theWorst.helpers.WaveSkipper;
+import theWorst.interfaces.Interruptible;
+import theWorst.interfaces.LoadSave;
+import theWorst.requests.Factory;
+import theWorst.requests.Loadout;
+import theWorst.requests.Request;
 
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
 import static mindustry.Vars.*;
 
 public class Main extends Plugin{
-    static final String ALL="all";
-    static final String saveFile="save.json";
-    static final String directory="config/mods/The_Worst/";
-    static final String prefix="[scarlet][Server][]";
+    public static final String ALL="all";
+    public static final String saveFile="save.json";
+    public static final String directory="config/mods/The_Worst/";
+    public static final String prefix="[scarlet][Server][]";
 
-    static final String[] itemIcons={"\uF838","\uF837","\uF836","\uF835","\uF832","\uF831","\uF82F","\uF82E","\uF82D","\uF82C"};
-    static final HashMap<String , LoadSave> saveConfigReq=new HashMap<>();
+    public static final String[] itemIcons={"\uF838","\uF837","\uF836","\uF835","\uF832","\uF831","\uF82F","\uF82E","\uF82D","\uF82C"};
+    public static final HashMap<String , LoadSave> saveConfigReq=new HashMap<>();
 
-    static int transportTime=30;
+    public static int transportTime=30;
 
-    static ArrayList<Item> items=new ArrayList<>();
+    public static ArrayList<Item> items=new ArrayList<>();
     ArrayList<Interruptible> interruptibles=new ArrayList<>();
 
     Loadout loadout=new Loadout();
@@ -64,10 +70,10 @@ public class Main extends Plugin{
         Events.on(WorldLoadEvent.class,e-> interruptibles.forEach(Interruptible::interrupt));
 
         Events.on(EventType.BuildSelectEvent.class, e->{
-
-            if(factory.requests.size()>0) {
+            ArrayList<Request> requests=factory.getRequests();
+            if(requests.size()>0) {
                 boolean canPlace=true;
-                for(Request r:factory.requests){
+                for(Request r:requests){
                     double dist=sqrt((pow(e.tile.x-(float)(r.aPackage.x/8),2)+
                             pow(e.tile.y-(float)(r.aPackage.y/8),2)));
                     if (dist<5){

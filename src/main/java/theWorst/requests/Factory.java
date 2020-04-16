@@ -1,4 +1,4 @@
-package example;
+package theWorst.requests;
 
 import arc.util.Log;
 import mindustry.entities.type.BaseUnit;
@@ -18,10 +18,16 @@ import java.util.HashMap;
 import arc.util.Timer;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import theWorst.Main;
+import theWorst.Package;
+import theWorst.interfaces.Interruptible;
+import theWorst.interfaces.LoadSave;
+import theWorst.interfaces.Requester;
+import theWorst.interfaces.Votable;
 
 import static mindustry.Vars.*;
 
-public class Factory extends Requesting implements Requester,Interruptible, LoadSave,Votable {
+public class Factory extends Requesting implements Requester, Interruptible, LoadSave, Votable {
     final int BUILD_LIMIT=10;
     final int BUILD_TIME=11;
     final int UNIT_COUNT=12;
@@ -35,7 +41,7 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
     public Factory(Loadout loadout){
         super();
         this.loadout=loadout;
-        for(Item item:Main.items){
+        for(Item item: Main.items){
             statKeys.add(item.name);
         }
         statKeys.add("build_limit");
@@ -65,7 +71,7 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
     }
 
     @Override
-    public void launch(Package p) {
+    public void launch(theWorst.Package p) {
         Request req;
         if(p.toBase){
             ArrayList<BaseUnit> units=new ArrayList<>();
@@ -106,7 +112,7 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
     }
 
     @Override
-    public Package verify(Player player, String object, String sAmount, boolean toBase) {
+    public theWorst.Package verify(Player player, String object, String sAmount, boolean toBase) {
         if(requests.size()==config.get(THREAD_COUNT)){
             player.sendMessage(Main.prefix+"Factory is doing maximum amount of tasks actually.");
             return null;
@@ -156,7 +162,7 @@ public class Factory extends Requesting implements Requester,Interruptible, Load
                     return null;
                 }
             }
-            return new Package(object,amount,true,player,x,y);
+            return new theWorst.Package(object,amount,true,player,x,y);
         }
         return new Package(object,amount,false,player);
     }

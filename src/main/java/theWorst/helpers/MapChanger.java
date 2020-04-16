@@ -1,4 +1,4 @@
-package example;
+package theWorst.helpers;
 
 import arc.struct.Array;
 import mindustry.Vars;
@@ -6,10 +6,13 @@ import mindustry.entities.type.Player;
 import mindustry.game.Gamemode;
 import mindustry.gen.Call;
 import mindustry.maps.Map;
+import theWorst.Main;
+import theWorst.Package;
+import theWorst.interfaces.Votable;
 
 import static mindustry.Vars.*;
 
-public class MapChanger implements Votable{
+public class MapChanger implements Votable {
 
     @Override
     public void launch(Package p) {

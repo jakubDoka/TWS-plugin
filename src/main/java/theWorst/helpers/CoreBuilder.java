@@ -1,4 +1,4 @@
-package example;
+package theWorst.helpers;
 
 import mindustry.content.Blocks;
 import mindustry.entities.type.Player;
@@ -6,12 +6,14 @@ import mindustry.gen.Call;
 import mindustry.type.Item;
 import mindustry.world.Block;
 import mindustry.world.blocks.storage.CoreBlock;
-
-import java.util.ArrayList;
+import theWorst.requests.Loadout;
+import theWorst.Main;
+import theWorst.interfaces.Votable;
+import theWorst.Package;
 
 import static mindustry.Vars.world;
 
-public class CoreBuilder implements Votable{
+public class CoreBuilder implements Votable {
 
 
     @Override
@@ -47,7 +49,7 @@ public class CoreBuilder implements Votable{
                 break;
         }
         boolean can_build=true;
-        CoreBlock.CoreEntity core=Loadout.getCore(player);
+        CoreBlock.CoreEntity core= Loadout.getCore(player);
         for(Item item:Main.items){
             if (!core.items.has(item, cost)) {
                 can_build=false;

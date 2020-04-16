@@ -1,4 +1,4 @@
-package example;
+package theWorst.requests;
 
 import arc.util.Timer;
 import mindustry.entities.type.Player;
@@ -7,6 +7,12 @@ import mindustry.gen.Call;
 import mindustry.type.Item;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
+import theWorst.Main;
+import theWorst.Package;
+import theWorst.interfaces.Interruptible;
+import theWorst.interfaces.LoadSave;
+import theWorst.interfaces.Requester;
+import theWorst.interfaces.Votable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,7 +20,7 @@ import java.util.HashMap;
 import static mindustry.Vars.state;
 
 
-public class Loadout extends Requesting implements Requester, Interruptible, LoadSave,Votable {
+public class Loadout extends Requesting implements Requester, Interruptible, LoadSave, Votable {
 
     int[] storage=new int[10];
 
@@ -26,7 +32,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
     }
 
     public Item getItemByName(String name){
-        for(Item i:Main.items){
+        for(Item i: Main.items){
             if(i.name.equals(name)){
                 return i;
             }

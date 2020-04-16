@@ -1,4 +1,4 @@
-package example;
+package theWorst.interfaces;
 
 import org.json.simple.JSONObject;
 

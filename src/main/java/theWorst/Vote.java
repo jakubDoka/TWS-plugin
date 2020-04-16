@@ -1,9 +1,11 @@
-package example;
+package theWorst;
 
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 
 import arc.util.Timer;
+import theWorst.interfaces.Interruptible;
+import theWorst.interfaces.Votable;
 
 import java.util.ArrayList;
 

@@ -1,15 +1,15 @@
-package example;
+package theWorst;
 
 import mindustry.entities.type.Player;
 
 public class Package{
-    int amount;
-    int x=0;
-    int y=0;
-    boolean toBase;
-    String object;
-    Player target;
-    mindustry.maps.Map map;
+    public int amount;
+    public int x=0;
+    public int y=0;
+    public boolean toBase;
+    public String object;
+    public Player target;
+    public mindustry.maps.Map map;
 
     public Package(String object,int amount,boolean toBase,Player target){
         this.object=object;

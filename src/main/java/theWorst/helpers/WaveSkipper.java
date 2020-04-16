@@ -1,11 +1,13 @@
-package example;
+package theWorst.helpers;
 
 import arc.math.Mathf;
 import mindustry.entities.type.Player;
+import theWorst.interfaces.Votable;
+import theWorst.Package;
 
 import static mindustry.Vars.logic;
 
-public class WaveSkipper implements Votable{
+public class WaveSkipper implements Votable {
 
     @Override
     public void launch(Package p) {

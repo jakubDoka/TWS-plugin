@@ -1,6 +1,6 @@
-package example;
+package theWorst.interfaces;
 
-import mindustry.entities.type.Player;
+import theWorst.requests.Request;
 
 import java.util.ArrayList;
 

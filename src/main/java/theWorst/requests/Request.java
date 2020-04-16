@@ -1,6 +1,9 @@
-package example;
+package theWorst.requests;
 
 import arc.util.Timer;
+import theWorst.Package;
+import theWorst.interfaces.Interruptible;
+import theWorst.interfaces.Requester;
 
 public class Request implements Interruptible {
     int time;
@@ -9,7 +12,7 @@ public class Request implements Interruptible {
     Timer.Task task;
     Timer.Task terminateTask;
     Requester requester;
-    Package aPackage;
+    public Package aPackage;
 
 
     Timer.Task countdown=new Timer.Task() {

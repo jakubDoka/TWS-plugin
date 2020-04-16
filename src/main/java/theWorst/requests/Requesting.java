@@ -1,6 +1,6 @@
-package example;
+package theWorst.requests;
 
-import org.json.simple.JSONObject;
+import theWorst.requests.Request;
 
 import java.util.ArrayList;
 import java.util.HashMap;
