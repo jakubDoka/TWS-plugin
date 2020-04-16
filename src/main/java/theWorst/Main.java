@@ -345,7 +345,7 @@ public class Main extends Plugin {
             vote.aVote(builder, p, "building " + arg[0] + " core. ", "core build");
         });
 
-        handler.<Player>register("vote", "<map/skipwave/restart> [index/name/waveAmount]", "",
+        handler.<Player>register("vote", "<map/skipwave/restart/gameover> [index/name/waveAmount]", "Opens vote session.",
                 (arg, player) -> {
             Package p;
             String secArg = arg.length == 2 ? arg[1] : "0";
@@ -361,8 +361,12 @@ public class Main extends Plugin {
                     vote.aVote(skipper, p, "skipping " + p.amount + " waves. ", "wave skip");
                     return;
                 case "restart":
-                    vote.aVote(changer, new Package(null, world.getMap(), player), "restart the game. ", "reset");
+                    vote.aVote(changer, new Package(null ,world.getMap(), player),
+                            "restart the game. ", "reset");
                     return;
+                case "gameover":
+                    vote.aVote(changer, new Package(null ,null, player),
+                            "gameover. ", "gameover");
                 default:
                     player.sendMessage(prefix + "Invalid first argument.");
             }

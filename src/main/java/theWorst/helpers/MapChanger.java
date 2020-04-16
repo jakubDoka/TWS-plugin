@@ -1,14 +1,18 @@
 package theWorst.helpers;
 
+import arc.Events;
 import arc.struct.Array;
 import mindustry.Vars;
 import mindustry.entities.type.Player;
+import mindustry.game.EventType;
 import mindustry.game.Gamemode;
+import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.maps.Map;
 import theWorst.Main;
 import theWorst.Package;
 import theWorst.interfaces.Votable;
+
 
 import static mindustry.Vars.*;
 
@@ -16,17 +20,29 @@ public class MapChanger implements Votable {
 
     @Override
     public void launch(Package p) {
-        Array<Player> all = Vars.playerGroup.all();
+        if(p.map==null){
+            Events.fire(new EventType.GameOverEvent(Team.crux));
+            return;
+        }
+
         Array<Player> players = new Array<>();
-        players.addAll(all);
+        for(Player player : playerGroup.all()) {
+            players.add(player);
+            player.setDead(true);
+        }
 
-        world.loadMap(p.map, p.map.applyRules(state.rules.attackMode ? Gamemode.attack : Gamemode.survival));
-
+        logic.reset();
         Call.onWorldDataBegin();
+        world.loadMap(p.map, p.map.applyRules(Gamemode.survival));
+        state.rules = world.getMap().applyRules(Gamemode.survival);
+        logic.play();
 
-        for (Player player : players) {
-            Vars.netServer.sendWorldData(player);
+
+        for(Player player : players){
+            if(player.con == null) continue;
+
             player.reset();
+            netServer.sendWorldData(player);
         }
     }
 
@@ -35,12 +51,12 @@ public class MapChanger implements Votable {
         Array<Map> mapList = maps.all();
         mindustry.maps.Map map = null;
         if (Main.isNotInteger(object)) {
-            map = mapList.find(m -> m.name().equalsIgnoreCase(object.replace('_', ' '))
+            map = maps.all().find(m -> m.name().equalsIgnoreCase(object.replace('_', ' '))
                     || m.name().equalsIgnoreCase(object));
         } else {
             int idx = Integer.parseInt(object);
             if (idx < mapList.size) {
-                map = mapList.get(idx);
+                map = maps.all().get(idx);
             }
 
         }
