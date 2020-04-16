@@ -20,7 +20,7 @@ public class MapChanger implements Votable {
         Array<Player> players = new Array<>();
         players.addAll(all);
 
-        world.loadMap(p.map, p.map.applyRules(state.rules.attackMode ? Gamemode.attack:Gamemode.survival));
+        world.loadMap(p.map, p.map.applyRules(state.rules.attackMode ? Gamemode.attack : Gamemode.survival));
 
         Call.onWorldDataBegin();
 
@@ -32,22 +32,22 @@ public class MapChanger implements Votable {
 
     @Override
     public Package verify(Player player, String object, String sAmount, boolean toBase) {
-        Array<Map> mapList=maps.all();
-        mindustry.maps.Map map=null;
-        if(Main.isNotInteger(object)){
-           map= mapList.find(m -> m.name().equalsIgnoreCase(object.replace('_', ' '))
-                   || m.name().equalsIgnoreCase(object));
+        Array<Map> mapList = maps.all();
+        mindustry.maps.Map map = null;
+        if (Main.isNotInteger(object)) {
+            map = mapList.find(m -> m.name().equalsIgnoreCase(object.replace('_', ' '))
+                    || m.name().equalsIgnoreCase(object));
         } else {
-            int idx=Integer.parseInt(object);
-            if(idx<mapList.size){
+            int idx = Integer.parseInt(object);
+            if (idx < mapList.size) {
                 map = mapList.get(idx);
             }
 
         }
-        if(map == null){
-            player.sendMessage(Main.prefix+"Map not found.");
+        if (map == null) {
+            player.sendMessage(Main.prefix + "Map not found.");
             return null;
         }
-        return new Package(object,map,player);
+        return new Package(object, map, player);
     }
 }

@@ -16,80 +16,80 @@ public class Vote implements Interruptible {
     Package aPackage;
 
     String report;
-    String[] alerts={"vote-50sec", "vote-40sec", "vote-30sec", "vote-20sec", "vote-10sec"};
+    String[] alerts = {"vote-50sec", "vote-40sec", "vote-30sec", "vote-20sec", "vote-10sec"};
 
-    ArrayList<String > voted=new ArrayList<>();
+    ArrayList<String> voted = new ArrayList<>();
 
     Timer.Task alert;
     Timer.Task task;
 
-    boolean voting=false;
+    boolean voting = false;
 
-    int alertIdx=0;
-    int votes=0;
+    int alertIdx = 0;
+    int votes = 0;
 
-    public void aVote(Votable votable, Package aPackage, String message,String report){
-        if(voting){
-            aPackage.target.sendMessage(Main.prefix+"Vote in process.");
+    public void aVote(Votable votable, Package aPackage, String message, String report) {
+        if (voting) {
+            aPackage.target.sendMessage(Main.prefix + "Vote in process.");
             return;
         }
-        this.votable=votable;
-        this.aPackage=aPackage;
-        this.report=report;
-        alertIdx=0;
-        votes=0;
-        voting=true;
-        alert=Timer.schedule(()->{
-            if(alertIdx==alerts.length){
+        this.votable = votable;
+        this.aPackage = aPackage;
+        this.report = report;
+        alertIdx = 0;
+        votes = 0;
+        voting = true;
+        alert = Timer.schedule(() -> {
+            if (alertIdx == alerts.length) {
                 return;
             }
-            Call.sendMessage(Main.prefix+alerts[alertIdx]);
+            Call.sendMessage(Main.prefix + alerts[alertIdx]);
             alertIdx++;
-        },10,10);
-        task=Timer.schedule(()->{
+        }, 10, 10);
+        task = Timer.schedule(() -> {
             close(false);
-        },60);
+        }, 60);
 
-        Call.sendMessage(Main.prefix+aPackage.target.name+
-                "[] started vote for "+message+"Send a message with \"y\" to agree.");
+        Call.sendMessage(Main.prefix + aPackage.target.name +
+                "[] started vote for " + message + "Send a message with \"y\" to agree.");
 
     }
 
-    public int getRequired(){
-        int count=playerGroup.size();
-        if(count==2){
+    public int getRequired() {
+        int count = playerGroup.size();
+        if (count == 2) {
             return 2;
         }
-        return (int)Math.ceil(count/2.0);
+        return (int) Math.ceil(count / 2.0);
     }
 
-    public void addVote(Player player,int vote){
-        if(voted.contains(player.uuid)){
-            player.sendMessage(Main.prefix+"You already voted,sit down!");
+    public void addVote(Player player, int vote) {
+        if (voted.contains(player.uuid)) {
+            player.sendMessage(Main.prefix + "You already voted,sit down!");
             return;
         }
-        votes+=vote;
-        if(votes>=getRequired()){
+        votes += vote;
+        if (votes >= getRequired()) {
 
             close(true);
             return;
         }
-        Call.sendMessage(Main.prefix+(votes-getRequired())+" more votes needed.");
+        Call.sendMessage(Main.prefix + (votes - getRequired()) + " more votes needed.");
     }
 
-    public void close(boolean success){
-        if(!voting){
+    public void close(boolean success) {
+        if (!voting) {
             return;
         }
-        voting=false;
+        voting = false;
         task.cancel();
         alert.cancel();
-        String result=Main.prefix+"vote-"+report;
-        if(success){
-            result+="-done";
+        String result = Main.prefix + "vote-" + report;
+        if (success) {
+            result += "-done";
             votable.launch(aPackage);
-        }else {
-            result+="-failed";
+        } else {
+            result += "-failed";
         }
         Call.sendMessage(result);
     }

@@ -15,6 +15,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+
 import arc.util.Timer;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -28,20 +29,20 @@ import theWorst.interfaces.Votable;
 import static mindustry.Vars.*;
 
 public class Factory extends Requesting implements Requester, Interruptible, LoadSave, Votable {
-    final int BUILD_LIMIT=10;
-    final int BUILD_TIME=11;
-    final int UNIT_COUNT=12;
+    final int BUILD_LIMIT = 10;
+    final int BUILD_TIME = 11;
+    final int UNIT_COUNT = 12;
 
-    final String configFile="factoryConfig.json";
+    final String configFile = "factoryConfig.json";
 
-    HashMap<String,int[]> stats=new HashMap<>();
-    final ArrayList<String > statKeys=new ArrayList<>();
+    HashMap<String, int[]> stats = new HashMap<>();
+    final ArrayList<String> statKeys = new ArrayList<>();
     Loadout loadout;
 
-    public Factory(Loadout loadout){
+    public Factory(Loadout loadout) {
         super();
-        this.loadout=loadout;
-        for(Item item: Main.items){
+        this.loadout = loadout;
+        for (Item item : Main.items) {
             statKeys.add(item.name);
         }
         statKeys.add("build_limit");
@@ -56,141 +57,142 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
 
     @Override
     public void fail(String object, int amount) {
-        if(object.equals("all")){
-            Call.sendMessage(Main.prefix+"Ship with all units don t have enough fuel to go back.All units are lost.");
+        if (object.equals("all")) {
+            Call.sendMessage(Main.prefix + "Ship with all units don t have enough fuel to go back.All units are lost.");
             return;
         }
-        stats.get(object)[UNIT_COUNT]+=amount;
-        Call.sendMessage(Main.prefix+Main.report(object,amount)+" are going back to base.");
+        stats.get(object)[UNIT_COUNT] += amount;
+        Call.sendMessage(Main.prefix + Main.report(object, amount) + " are going back to base.");
     }
 
     @Override
     public String getProgress(Request request) {
-        return Main.report(request.aPackage.object,request.aPackage.amount)+" will " +
-                (request.aPackage.toBase ? "arrive":"be finished")+" in "+Main.timeToString(request.time)+".\n";
+        return Main.report(request.aPackage.object, request.aPackage.amount) + " will " +
+                (request.aPackage.toBase ? "arrive" : "be finished") + " in " + Main.timeToString(request.time) + ".\n";
     }
 
     @Override
     public void launch(theWorst.Package p) {
         Request req;
-        if(p.toBase){
-            ArrayList<BaseUnit> units=new ArrayList<>();
-            if (p.object.equals("all")){
-                for (String name:stats.keySet()){
-                    add_units(getUnitByName(name),units,p.target,-1,p.x,p.y);
+        if (p.toBase) {
+            ArrayList<BaseUnit> units = new ArrayList<>();
+            if (p.object.equals("all")) {
+                for (String name : stats.keySet()) {
+                    add_units(getUnitByName(name), units, p.target, -1, p.x, p.y);
                 }
-            }else {
-                add_units(getUnitByName(p.object),units,p.target,p.amount,p.x,p.y);
+            } else {
+                add_units(getUnitByName(p.object), units, p.target, p.amount, p.x, p.y);
             }
-            req=new Request(Main.transportTime,new Timer.Task() {
+            req = new Request(Main.transportTime, new Timer.Task() {
                 @Override
                 public void run() {
-                    for(BaseUnit u:units){
+                    for (BaseUnit u : units) {
                         u.add();
                     }
-                    Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" units arrived.");
+                    Call.sendMessage(Main.prefix + "[green]" + Main.report(p.object, p.amount) + " units arrived.");
                 }
-            },this,p,true);
+            }, this, p, true);
 
-            world.tile(p.x/8,p.y/8).removeNet();
-        }else{
-            int[] thisUnitStats =stats.get(p.object);
-            for (int i=0;i<Main.items.size();i++) {
+            world.tile(p.x / 8, p.y / 8).removeNet();
+        } else {
+            int[] thisUnitStats = stats.get(p.object);
+            for (int i = 0; i < Main.items.size(); i++) {
                 int requires = thisUnitStats[i];
-                loadout.storage[i] -= requires*p.amount;
+                loadout.storage[i] -= requires * p.amount;
             }
-            int buildTime=(int)(p.amount/(float)thisUnitStats[BUILD_LIMIT]*thisUnitStats[BUILD_TIME]*60);
-            req=new Request(buildTime,new Timer.Task() {
+            int buildTime = (int) (p.amount / (float) thisUnitStats[BUILD_LIMIT] * thisUnitStats[BUILD_TIME] * 60);
+            req = new Request(buildTime, new Timer.Task() {
                 @Override
                 public void run() {
-                    stats.get(p.object)[UNIT_COUNT]+=p.amount;
-                    Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" wos finished and are waiting in a hangar.");
+                    stats.get(p.object)[UNIT_COUNT] += p.amount;
+                    Call.sendMessage(Main.prefix + "[green]" + Main.report(p.object, p.amount) + " wos finished and are waiting in a hangar.");
                 }
-            },this,p,false);
+            }, this, p, false);
         }
         requests.add(req);
     }
 
     @Override
     public theWorst.Package verify(Player player, String object, String sAmount, boolean toBase) {
-        if(requests.size()==config.get(THREAD_COUNT)){
-            player.sendMessage(Main.prefix+"Factory is doing maximum amount of tasks actually.");
+        if (requests.size() == config.get(THREAD_COUNT)) {
+            player.sendMessage(Main.prefix + "Factory is doing maximum amount of tasks actually.");
             return null;
         }
-        if(!stats.containsKey(object) && !(object.equals(Main.ALL) && toBase)){
-            player.sendMessage(Main.prefix+"Factory cannot build nor send [scarlet] "+object+"[].");
+        if (!stats.containsKey(object) && !(object.equals(Main.ALL) && toBase)) {
+            player.sendMessage(Main.prefix + "Factory cannot build nor send [scarlet] " + object + "[].");
             return null;
         }
-        UnitType targetUnit=getUnitByName(object);
-        int amount=Integer.parseInt(sAmount);
-        boolean hasEnough=true;
+        UnitType targetUnit = getUnitByName(object);
+        int amount = Integer.parseInt(sAmount);
+        boolean hasEnough = true;
         if (!toBase) {
-            int[] cost=stats.get(object);
-            for(int i=0;i<Main.items.size();i++){
-                int missing=cost[i]*amount-loadout.storage[i];
-                if(missing>0){
-                    hasEnough=false;
-                    player.sendMessage(Main.prefix+"You are missing [scarlet]"+missing+"[]"
-                            +Main.itemIcons[i]+".");
+            int[] cost = stats.get(object);
+            for (int i = 0; i < Main.items.size(); i++) {
+                int missing = cost[i] * amount - loadout.storage[i];
+                if (missing > 0) {
+                    hasEnough = false;
+                    player.sendMessage(Main.prefix + "You are missing [scarlet]" + missing + "[]"
+                            + Main.itemIcons[i] + ".");
                 }
             }
-            if (!hasEnough){
+            if (!hasEnough) {
                 return null;
             }
-        }else {
-            int uCount=getUnitCount(object);
-            if(object.equals("all")){
-                amount=uCount;
+        } else {
+            int uCount = getUnitCount(object);
+            if (object.equals("all")) {
+                amount = uCount;
             }
-            if(uCount==0){
-                player.sendMessage(Main.prefix+"Nothing to launch.");
+            if (uCount == 0) {
+                player.sendMessage(Main.prefix + "Nothing to launch.");
                 return null;
             }
-            if(uCount<amount){
-                player.sendMessage(Main.prefix+"There are only"+Main.report(object,uCount)+".");
+            if (uCount < amount) {
+                player.sendMessage(Main.prefix + "There are only" + Main.report(object, uCount) + ".");
                 return null;
-            }if(amount>config.get(MAX_TRANSPORT)){
-                player.sendMessage(Main.prefix+"You can transport at most [orange]"+config.get(MAX_TRANSPORT)+
-                        "[] units but you attempt to transport [scarlet]"+amount+"[] units.");
+            }
+            if (amount > config.get(MAX_TRANSPORT)) {
+                player.sendMessage(Main.prefix + "You can transport at most [orange]" + config.get(MAX_TRANSPORT) +
+                        "[] units but you attempt to transport [scarlet]" + amount + "[] units.");
                 return null;
             }
             int x = (int) player.x;
             int y = (int) player.y;
             if (world.tile(x / 8, y / 8).solid()) {
-                if (  object.equals("all") || !targetUnit.flying) {
-                    player.sendMessage(Main.prefix+"Land unit cant be dropped on a solid block.");
+                if (object.equals("all") || !targetUnit.flying) {
+                    player.sendMessage(Main.prefix + "Land unit cant be dropped on a solid block.");
                     return null;
                 }
             }
-            return new theWorst.Package(object,amount,true,player,x,y);
+            return new theWorst.Package(object, amount, true, player, x, y);
         }
-        return new Package(object,amount,false,player);
+        return new Package(object, amount, false, player);
     }
 
-    public static UnitType getUnitByName(String name){
+    public static UnitType getUnitByName(String name) {
         return content.units().find(unitType -> unitType.name.equals(name));
     }
 
-    public int getUnitCount(String key){
-        if(key.equals("all")){
-            int res=0;
-            for(String k:stats.keySet()){
-                res+=getUnitCount(k);
+    public int getUnitCount(String key) {
+        if (key.equals("all")) {
+            int res = 0;
+            for (String k : stats.keySet()) {
+                res += getUnitCount(k);
             }
             return res;
         }
         return stats.get(key)[UNIT_COUNT];
-     }
+    }
 
-    public void add_units(UnitType unitType, ArrayList<BaseUnit> units, Player player, int amount,int x,int y){
-        amount=amount==-1 ? stats.get(unitType.name)[UNIT_COUNT]:amount;
-        for(int i=0;i<amount;i++){
-            BaseUnit unit=unitType.create(player.getTeam());
-            unit.set(x,y);
+    public void add_units(UnitType unitType, ArrayList<BaseUnit> units, Player player, int amount, int x, int y) {
+        amount = amount == -1 ? stats.get(unitType.name)[UNIT_COUNT] : amount;
+        for (int i = 0; i < amount; i++) {
+            BaseUnit unit = unitType.create(player.getTeam());
+            unit.set(x, y);
             units.add(unit);
         }
 
-        stats.get(unitType.name)[UNIT_COUNT]-=amount;
+        stats.get(unitType.name)[UNIT_COUNT] -= amount;
     }
 
     @Override
@@ -200,13 +202,13 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     }
 
     public String info() {
-        StringBuilder message=new StringBuilder();
+        StringBuilder message = new StringBuilder();
         message.append("[orange]--FACTORY INFO--[]\n\nunit/in hangar\n");
-        for(String name:stats.keySet()){
+        for (String name : stats.keySet()) {
             message.append(name).append("/").append(getUnitCount(name)).append("\n");
         }
         message.append("\n");
-        int freeThreads=config.get(THREAD_COUNT);
+        int freeThreads = config.get(THREAD_COUNT);
         for (Request r : requests) {
             message.append(getProgress(r));
             freeThreads--;
@@ -216,22 +218,22 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
         return message.toString();
     }
 
-    public String price(Player player,String unitName,int amount){
+    public String price(Player player, String unitName, int amount) {
         if (!stats.containsKey(unitName)) {
-            player.sendMessage(Main.prefix+"There is no [scarlet]" + unitName + "[] only "+stats.keySet().toString()+".");
+            player.sendMessage(Main.prefix + "There is no [scarlet]" + unitName + "[] only " + stats.keySet().toString() + ".");
             return null;
         }
-        StringBuilder message= new StringBuilder();
+        StringBuilder message = new StringBuilder();
         message.append("[orange]--").append(amount).append(" ").append(unitName.toUpperCase()).append("--[]").append("\n\n");
         message.append("in loadout / price\n");
-        for(int i=0;i<10;i++){
-            int inLoadout=loadout.storage[i];
-            int price=stats.get(unitName)[i];
-            if(price==0){
+        for (int i = 0; i < 10; i++) {
+            int inLoadout = loadout.storage[i];
+            int price = stats.get(unitName)[i];
+            if (price == 0) {
                 continue;
             }
-            message.append(price>inLoadout ? "[red]":"[white]");
-            message.append(inLoadout).append(" [white]/ ").append((price*amount)).append(Main.itemIcons[i]).append("\n");
+            message.append(price > inLoadout ? "[red]" : "[white]");
+            message.append(inLoadout).append(" [white]/ ").append((price * amount)).append(Main.itemIcons[i]).append("\n");
         }
         message.append("\n[scarlet]!!![]Factory will take resources from loadout not from the core[scarlet]!!![]\n");
         message.append("Build time: [orange]").append(stats.get(unitName)[BUILD_TIME]).append("[].\n");
@@ -241,23 +243,25 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
 
     @Override
     public JSONObject save() {
-        JSONObject data=new JSONObject();
-        for (String name:stats.keySet()){
-            data.put(name,getUnitCount(name));
+        JSONObject data = new JSONObject();
+        for (String name : stats.keySet()) {
+            data.put(name, getUnitCount(name));
         }
         return data;
     }
 
     @Override
-    public void load(JSONObject data){
-        for (String name:stats.keySet()){
-            if(!stats.containsKey(name)){continue;}
-            Integer val=Main.getInt(data.get(name));
-            if(val==null){
-                Main.loadingError("Factory/save/"+name);
+    public void load(JSONObject data) {
+        for (String name : stats.keySet()) {
+            if (!stats.containsKey(name)) {
                 continue;
             }
-            stats.get(name)[UNIT_COUNT]=val;
+            Integer val = Main.getInt(data.get(name));
+            if (val == null) {
+                Main.loadingError("Factory/save/" + name);
+                continue;
+            }
+            stats.get(name)[UNIT_COUNT] = val;
         }
     }
 
@@ -266,69 +270,71 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
         return config;
     }
 
-    public void config(){
-        String path=Main.directory+configFile;
-        try(FileReader fileReader = new FileReader(path)) {
+    public void config() {
+        String path = Main.directory + configFile;
+        try (FileReader fileReader = new FileReader(path)) {
             stats.clear();
-            JSONParser jsonParser=new JSONParser();
-            JSONObject settings =(JSONObject) jsonParser.parse(fileReader);
-            for(Object setting:settings.keySet()){
-                if(getUnitByName((String)setting)==null){
-                    Log.info("Unit name "+setting+" is invalid.It will be ignored.");
-                    StringBuilder list=new StringBuilder();
-                    for(UnitType unit:content.units()){
+            JSONParser jsonParser = new JSONParser();
+            JSONObject settings = (JSONObject) jsonParser.parse(fileReader);
+            for (Object setting : settings.keySet()) {
+                if (getUnitByName((String) setting) == null) {
+                    Log.info("Unit name " + setting + " is invalid.It will be ignored.");
+                    StringBuilder list = new StringBuilder();
+                    for (UnitType unit : content.units()) {
                         list.append(unit.name).append(" ");
                     }
-                    Log.info("Valid units: "+list.toString());
+                    Log.info("Valid units: " + list.toString());
                     continue;
                 }
-                int[] data=new int[13];
-                int idx=0;
-                boolean fail=false;
-                JSONObject jsInfo=(JSONObject)settings.get(setting);
-                for(String key:statKeys){
+                int[] data = new int[13];
+                int idx = 0;
+                boolean fail = false;
+                JSONObject jsInfo = (JSONObject) settings.get(setting);
+                for (String key : statKeys) {
 
-                    if(!jsInfo.containsKey(key)){
-                        Log.info("Config loading:missing property "+key+" in "+setting+". "+setting+" will be ignored.");
-                        fail=true;
+                    if (!jsInfo.containsKey(key)) {
+                        Log.info("Config loading:missing property " + key + " in " + setting + ". " + setting + " will be ignored.");
+                        fail = true;
                         break;
                     }
-                    Integer val=Main.getInt(jsInfo.get(key));
-                    if(val==null){
-                        Main.loadingError("Loadout/save/"+key);
-                        data[idx]=1;
-                    }else {
-                        data[idx]=val;
+                    Integer val = Main.getInt(jsInfo.get(key));
+                    if (val == null) {
+                        Main.loadingError("Loadout/save/" + key);
+                        data[idx] = 1;
+                    } else {
+                        data[idx] = val;
                     }
                     idx++;
                 }
-                if(fail){continue;}
-                stats.put((String)setting,data);
+                if (fail) {
+                    continue;
+                }
+                stats.put((String) setting, data);
             }
-            Log.info(stats.size()==0 ? "Nothing to load from config file.":"Config loaded.");
-        }catch (FileNotFoundException ex) {
+            Log.info(stats.size() == 0 ? "Nothing to load from config file." : "Config loaded.");
+        } catch (FileNotFoundException ex) {
             Log.info("No config file found.");
             createDefaultConfig();
-        }catch (ParseException ex){
+        } catch (ParseException ex) {
             Log.info("Json file is invalid");
-        }catch (IOException ex){
-            Log.info("Error when loading data from "+path+".");
+        } catch (IOException ex) {
+            Log.info("Error when loading data from " + path + ".");
         }
     }
 
-    public void createDefaultConfig(){
-        String path=Main.directory+configFile;
-        try(FileWriter file = new FileWriter(path)) {
+    public void createDefaultConfig() {
+        String path = Main.directory + configFile;
+        try (FileWriter file = new FileWriter(path)) {
 
-            JSONObject unit =new JSONObject();
-            for(String key:statKeys){
-                unit.put(key,5);
+            JSONObject unit = new JSONObject();
+            for (String key : statKeys) {
+                unit.put(key, 5);
             }
-            JSONObject config =new JSONObject();
-            config.put("eruptor",unit);
+            JSONObject config = new JSONObject();
+            config.put("eruptor", unit);
             file.write(config.toJSONString());
-            Log.info("Default "+path+" successfully created.Edit it and use apply-config command.");
-        }catch (IOException ex){
+            Log.info("Default " + path + " successfully created.Edit it and use apply-config command.");
+        } catch (IOException ex) {
             Log.info("Error when creating default config.");
         }
     }

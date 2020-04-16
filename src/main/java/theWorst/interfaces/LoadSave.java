@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 public interface LoadSave {
     void load(JSONObject data);
-    HashMap<String ,Integer> get_config();
+    HashMap<String, Integer> get_config();
     JSONObject save();
 
 

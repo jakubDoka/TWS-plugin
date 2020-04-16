@@ -22,31 +22,31 @@ import static mindustry.Vars.state;
 
 public class Loadout extends Requesting implements Requester, Interruptible, LoadSave, Votable {
 
-    int[] storage=new int[10];
+    int[] storage = new int[10];
 
-    final String STORAGE_SIZE="storage_size";
+    final String STORAGE_SIZE = "storage_size";
 
-    public Loadout(){
+    public Loadout() {
         super();
-        config.put(STORAGE_SIZE,10000000);
+        config.put(STORAGE_SIZE, 10000000);
     }
 
-    public Item getItemByName(String name){
-        for(Item i: Main.items){
-            if(i.name.equals(name)){
+    public Item getItemByName(String name) {
+        for (Item i : Main.items) {
+            if (i.name.equals(name)) {
                 return i;
             }
         }
         return null;
     }
 
-    public int getItemIdx(Item item){
-        if(item==null){
+    public int getItemIdx(Item item) {
+        if (item == null) {
             return -1;
         }
-        int idx=0;
-        for(Item i:Main.items){
-            if(i.name.equals(item.name)){
+        int idx = 0;
+        for (Item i : Main.items) {
+            if (i.name.equals(item.name)) {
                 return idx;
             }
             idx++;
@@ -64,8 +64,8 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             message.append(amount).append(Main.itemIcons[i]).append("\n");
         }
         message.append("[white]\n");
-        int freeShips=config.get(THREAD_COUNT);
-        for(Request r:requests){
+        int freeShips = config.get(THREAD_COUNT);
+        for (Request r : requests) {
             message.append(getProgress(r)).append("\n");
             freeShips--;
         }
@@ -79,106 +79,106 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
     }
 
     @Override
-    public void fail(String object,int amount) {
-        Call.sendMessage("Ship with " + Main.report(object,amount)
-                 + " is going back to loadout");
-        storage[getItemIdx(getItemByName(object))]+=amount;
+    public void fail(String object, int amount) {
+        Call.sendMessage("Ship with " + Main.report(object, amount)
+                + " is going back to loadout");
+        storage[getItemIdx(getItemByName(object))] += amount;
 
     }
 
     @Override
     public String getProgress(Request request) {
-        return "Ship with " + Main.report(request.aPackage.object,request.aPackage.amount)
-                + " will arrive in "+ Main.timeToString(request.time) + ".";
+        return "Ship with " + Main.report(request.aPackage.object, request.aPackage.amount)
+                + " will arrive in " + Main.timeToString(request.time) + ".";
     }
 
     @Override
-    public void launch(Package p){
+    public void launch(Package p) {
         Timer.Task task;
-        Item targetItem=getItemByName(p.object);
+        Item targetItem = getItemByName(p.object);
         CoreBlock.CoreEntity core = getCore(p.target);
-        int amount=getTransportAmount(targetItem,p.amount,core,p.toBase);
-        int idx=getItemIdx(targetItem);
-        if(p.toBase){
+        int amount = getTransportAmount(targetItem, p.amount, core, p.toBase);
+        int idx = getItemIdx(targetItem);
+        if (p.toBase) {
 
-            storage[idx]-=amount;
+            storage[idx] -= amount;
             int finalAmount = amount;
-            task=new Timer.Task() {
+            task = new Timer.Task() {
                 @Override
                 public void run() {
                     core.items.add(targetItem, finalAmount);
-                    Call.sendMessage(Main.prefix+"[green]"+Main.report(p.object,p.amount)+" arrived to core.");
+                    Call.sendMessage(Main.prefix + "[green]" + Main.report(p.object, p.amount) + " arrived to core.");
                 }
             };
-            requests.add(new Request(Main.transportTime,task,this,p,true));
-        }else {
-            if(amount==-1){
-                idx=0;
-                for(Item i:Main.items){
-                    amount=getTransportAmount(i,p.amount,core,p.toBase);
-                    core.items.remove(i,amount);
-                    storage[idx]+=amount;
+            requests.add(new Request(Main.transportTime, task, this, p, true));
+        } else {
+            if (amount == -1) {
+                idx = 0;
+                for (Item i : Main.items) {
+                    amount = getTransportAmount(i, p.amount, core, p.toBase);
+                    core.items.remove(i, amount);
+                    storage[idx] += amount;
                     idx++;
                 }
-            }else {
-                core.items.remove(targetItem,amount);
-                storage[idx]+=amount;
+            } else {
+                core.items.remove(targetItem, amount);
+                storage[idx] += amount;
 
             }
-            Call.sendMessage(Main.prefix+"[green][orange]" + (p.object.equals("all") ? p.amount+" of all":amount+" "+p.object) +"[] arrived to loadout.");
+            Call.sendMessage(Main.prefix + "[green][orange]" + (p.object.equals("all") ? p.amount + " of all" : amount + " " + p.object) + "[] arrived to loadout.");
         }
     }
 
     @Override
-    public Package verify(Player player, String object, String sAmount,boolean toBase){
-        if(requests.size()==config.get(THREAD_COUNT) && toBase){
-            player.sendMessage(Main.prefix+" All the ships are occupied at the moment.");
+    public Package verify(Player player, String object, String sAmount, boolean toBase) {
+        if (requests.size() == config.get(THREAD_COUNT) && toBase) {
+            player.sendMessage(Main.prefix + " All the ships are occupied at the moment.");
             return null;
         }
-        Item targetItem=getItemByName(object);
-        if(targetItem==null && !(object.equals(Main.ALL) && !toBase)){
-            player.sendMessage(Main.prefix+"The [scarlet] "+object+"[] doesn't exist.");
+        Item targetItem = getItemByName(object);
+        if (targetItem == null && !(object.equals(Main.ALL) && !toBase)) {
+            player.sendMessage(Main.prefix + "The [scarlet] " + object + "[] doesn't exist.");
             return null;
         }
-        int amount=Integer.parseInt(sAmount);
+        int amount = Integer.parseInt(sAmount);
         CoreBlock.CoreEntity core = getCore(player);
-        if(getTransportAmount(targetItem,amount,core,toBase)==0){
-            player.sendMessage(Main.prefix+"Nothing to transport.");
+        if (getTransportAmount(targetItem, amount, core, toBase) == 0) {
+            player.sendMessage(Main.prefix + "Nothing to transport.");
             return null;
         }
 
-        return new Package(object,amount,toBase,player);
+        return new Package(object, amount, toBase, player);
     }
 
-    public static CoreBlock.CoreEntity getCore(Player p){
+    public static CoreBlock.CoreEntity getCore(Player p) {
         Teams.TeamData teamData = state.teams.get(p.getTeam());
         return teamData.cores.first();
     }
 
 
-    public int getTransportAmount(Item item, int amount, CoreBlock.CoreEntity core, boolean toBase){
-        if(item==null){
+    public int getTransportAmount(Item item, int amount, CoreBlock.CoreEntity core, boolean toBase) {
+        if (item == null) {
             return -1;
         }
 
-        int maxTransport=config.get(MAX_TRANSPORT);
-        int capacity=config.get(STORAGE_SIZE);
-        int loadout_amount=storage[getItemIdx(item)];
-        int core_amount=core.items.get(item);
+        int maxTransport = config.get(MAX_TRANSPORT);
+        int capacity = config.get(STORAGE_SIZE);
+        int loadout_amount = storage[getItemIdx(item)];
+        int core_amount = core.items.get(item);
 
-        if (toBase){
-            if(loadout_amount<amount){
-                amount=loadout_amount;
+        if (toBase) {
+            if (loadout_amount < amount) {
+                amount = loadout_amount;
             }
-            if(amount>maxTransport){
-                amount=maxTransport;
+            if (amount > maxTransport) {
+                amount = maxTransport;
             }
         } else {
-            if(amount>core_amount) {
-                amount=core_amount;
+            if (amount > core_amount) {
+                amount = core_amount;
             }
-            if(loadout_amount+amount>capacity){
-                amount=capacity-loadout_amount;
+            if (loadout_amount + amount > capacity) {
+                amount = capacity - loadout_amount;
             }
         }
         return amount;
@@ -192,25 +192,25 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
 
     @Override
     public JSONObject save() {
-        JSONObject data=new JSONObject();
-        int idx=0;
-        for(Item item:Main.items){
-            data.put(item.name,storage[idx]);
+        JSONObject data = new JSONObject();
+        int idx = 0;
+        for (Item item : Main.items) {
+            data.put(item.name, storage[idx]);
             idx++;
         }
         return data;
     }
 
     @Override
-    public void load(JSONObject data){
-        int idx=0;
-        for(Item item:Main.items){
+    public void load(JSONObject data) {
+        int idx = 0;
+        for (Item item : Main.items) {
 
-            Integer val=Main.getInt(data.get(item.name));
-            if(val==null){
-                Main.loadingError("Loadout/save/"+item.name);
-            }else {
-                storage[idx]=val;
+            Integer val = Main.getInt(data.get(item.name));
+            if (val == null) {
+                Main.loadingError("Loadout/save/" + item.name);
+            } else {
+                storage[idx] = val;
             }
             idx++;
         }
