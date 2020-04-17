@@ -8,6 +8,7 @@ import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Votable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import static mindustry.Vars.*;
 
@@ -19,23 +20,31 @@ public class Vote implements Interruptible {
     String[] alerts = {"vote-50sec", "vote-40sec", "vote-30sec", "vote-20sec", "vote-10sec"};
 
     ArrayList<String> voted = new ArrayList<>();
+    HashMap<String,Integer> recent = new HashMap<>();
 
     Timer.Task alert;
     Timer.Task task;
 
     boolean voting = false;
 
+    int voteCooldown =60;
     int alertIdx = 0;
     int votes = 0;
 
 
     public void aVote(Votable votable, Package aPackage, String message, String report) {
+        Player requester=aPackage.target;
         if (voting) {
-            aPackage.target.sendMessage(Main.prefix + "Vote in process.");
+            requester.sendMessage(Main.prefix + "Vote in process.");
             return;
         }
-        if (AntiGriefer.isGriefer(aPackage.target)){
-            AntiGriefer.abuse(aPackage.target);
+        if (AntiGriefer.isGriefer(requester)){
+            AntiGriefer.abuse(requester);
+            return;
+        }
+        if(isRecent(requester)){
+            requester.sendMessage(Main.prefix+"Your last vote failed,to prevent spam you have to wait "
+                    +Main.timeToString(recent.get(requester.uuid))+".");
             return;
         }
         this.votable = votable;
@@ -55,8 +64,28 @@ public class Vote implements Interruptible {
             close(false);
         }, 60);
 
-        Call.sendMessage(Main.prefix +"[orange]"+ aPackage.target.name +
+        Call.sendMessage(Main.prefix +"[orange]"+ requester.name +
                 "[] started vote for " + message + " Send a message with \"y\" to agree or \"n\" to disagree.");
+
+    }
+
+    private boolean isRecent(Player player) {
+        return recent.containsKey(player.uuid);
+    }
+
+    public void addToRecent(Player player){
+        recent.put(player.uuid, voteCooldown);
+        Timer.schedule(new Timer.Task(){
+            @Override
+            public void run() {
+                int time=recent.get(player.uuid);
+                if(time==0){
+                    recent.remove(player.uuid);
+                    this.cancel();
+                }
+                recent.put(player.uuid,time-1);
+            }
+        },0,1);
 
     }
 
@@ -106,6 +135,7 @@ public class Vote implements Interruptible {
             votable.launch(aPackage);
         } else {
             result += "-failed";
+            addToRecent(aPackage.target);
         }
         Call.sendMessage(result);
     }

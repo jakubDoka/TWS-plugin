@@ -18,11 +18,14 @@ import mindustry.type.Item;
 import mindustry.type.ItemType;
 
 
+import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import mindustry.type.UnitType;
+import mindustry.world.Tile;
+import mindustry.world.blocks.logic.MessageBlock;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -69,14 +72,12 @@ public class Main extends Plugin {
 
 
     public Main() {
+
         Events.on(PlayerConnect.class, e -> {
             antiGrifer.addRank(e.player);
         });
 
         Events.on(PlayerChatEvent.class, e -> {
-            if(AntiGriefer.isGriefer(e.player)){
-
-            }
             if (vote.voting){
                 if(AntiGriefer.isGriefer(e.player)){
                     e.player.sendMessage(AntiGriefer.message);
@@ -90,7 +91,9 @@ public class Main extends Plugin {
             }
         });
 
-        Events.on(WorldLoadEvent.class, e -> interruptibles.forEach(Interruptible::interrupt));
+        Events.on(WorldLoadEvent.class, e ->{
+            interruptibles.forEach(Interruptible::interrupt);
+        });
 
         Events.on(EventType.BuildSelectEvent.class, e -> {
             ArrayList<Request> requests = factory.getRequests();
@@ -230,7 +233,7 @@ public class Main extends Plugin {
     }
 
     public static String timeToString(int time) {
-        return time / 60 + "sec" + time % 60 + "sec";
+        return time / 60 + "min" + time % 60 + "sec";
     }
 
     private boolean makeDir() {

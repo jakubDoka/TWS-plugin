@@ -19,7 +19,6 @@ public class AntiGriefer implements Votable, LoadSave {
     public static final String message= Main.prefix+"[pink]Okay griefer.";
     public static final String rank="[pink]<Griefer>";
     static HashMap<String ,Long> griefers=new HashMap<>();
-    Array<String> voted=new Array<>();
 
     public static boolean isGriefer(Player player){
         return griefers.containsKey(player.uuid);
