@@ -3,7 +3,8 @@ package theWorst;
 import arc.Events;
 import arc.util.CommandHandler;
 import arc.util.Log;
-import mindustry.Vars;
+import arc.util.Time;
+import arc.util.Timer;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.base.BuilderDrone;
@@ -11,6 +12,7 @@ import mindustry.game.EventType;
 import mindustry.game.EventType.*;
 import mindustry.game.Team;
 import mindustry.gen.Call;
+import mindustry.net.Administration;
 import mindustry.plugin.Plugin;
 import mindustry.type.Item;
 import mindustry.type.ItemType;
@@ -33,6 +35,7 @@ import theWorst.interfaces.LoadSave;
 import theWorst.requests.Factory;
 import theWorst.requests.Loadout;
 import theWorst.requests.Request;
+import theWorst.requests.Requesting;
 
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
@@ -45,25 +48,45 @@ public class Main extends Plugin {
     public static final String prefix = "[scarlet][Server][]";
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
-    public static final HashMap<String, LoadSave> saveConfigReq = new HashMap<>();
+    public static HashMap<String, LoadSave> loadSave = new HashMap<>();
+    public static HashMap<String, Requesting> configured = new HashMap<>();
 
     public static int transportTime = 3 * 60;
 
     public static ArrayList<Item> items = new ArrayList<>();
     ArrayList<Interruptible> interruptibles = new ArrayList<>();
 
+    Timer.Task autoSaveThread=null;
+    int defaultAutoSaveFrequency=5;
+
     Loadout loadout = new Loadout();
     Factory factory;
     CoreBuilder builder = new CoreBuilder();
     MapChanger changer = new MapChanger();
     WaveSkipper skipper = new WaveSkipper();
+    AntiGriefer antiGrifer=new AntiGriefer();
     Vote vote = new Vote();
 
 
     public Main() {
+        Events.on(PlayerConnect.class, e -> {
+            antiGrifer.addRank(e.player);
+        });
+
         Events.on(PlayerChatEvent.class, e -> {
-            if (vote.voting && e.message.equals("y")) {
-                vote.addVote(e.player, 1);
+            if(AntiGriefer.isGriefer(e.player)){
+
+            }
+            if (vote.voting){
+                if(AntiGriefer.isGriefer(e.player)){
+                    e.player.sendMessage(AntiGriefer.message);
+                }
+                if(e.message.equals("y")) {
+                    vote.addVote(e.player, 1);
+                }
+                else if(e.message.equals("n")){
+                    vote.addVote(e.player,-1);
+                }
             }
         });
 
@@ -94,19 +117,53 @@ public class Main extends Plugin {
         });
 
         Events.on(ServerLoadEvent.class, e -> {
+            netServer.admins.addActionFilter(action -> {
+                Player player = action.player;
+                if (player == null) return true;
+
+                //if (player.isAdmin) return true;
+                if(AntiGriefer.isGriefer(player)){
+                    AntiGriefer.abuse(player);
+                    return false;
+                }
+                return action.type != Administration.ActionType.rotate;
+            });
+            netServer.admins.addChatFilter((player,message)->{
+                if((message.equals("y") || message.equals("n")) && vote.voting){
+                    return null;
+                }
+                if(AntiGriefer.isGriefer(player)){
+                    Log.info(AntiGriefer.getLastMessageTime(player));
+                    if(Time.timeSinceMillis(AntiGriefer.getLastMessageTime(player))<10000L){
+                        AntiGriefer.abuse(player);
+                        return null;
+                    }
+                    AntiGriefer.updateLastMessageTime(player);
+                }
+
+                return message;
+            });
             load_items();
             factory = new Factory(loadout);
-            interruptibles.add(loadout);
-            interruptibles.add(factory);
-            interruptibles.add(vote);
-            saveConfigReq.put("loadout", loadout);
-            saveConfigReq.put("factory", factory);
+            addToGroups();
             if (!makeDir()) {
                 Log.info("Unable to create directory " + directory + ".");
             }
             load();
+            autoSave(defaultAutoSaveFrequency);
         });
 
+    }
+
+    private void addToGroups(){
+        interruptibles.add(loadout);
+        interruptibles.add(factory);
+        interruptibles.add(vote);
+        loadSave.put("loadout", loadout);
+        loadSave.put("factory", factory);
+        loadSave.put("griefers", antiGrifer);
+        configured.put("loadout", loadout);
+        configured.put("factory", factory);
     }
 
     public void load() {
@@ -115,13 +172,13 @@ public class Main extends Plugin {
             JSONParser jsonParser = new JSONParser();
             Object obj = jsonParser.parse(fileReader);
             JSONObject saveData = (JSONObject) obj;
-            for (String r : saveConfigReq.keySet()) {
+            for (String r : loadSave.keySet()) {
                 if (!saveData.containsKey(r)) {
                     Log.info("Failed to load save file.");
                     return;
                 }
             }
-            saveConfigReq.keySet().forEach((k) -> saveConfigReq.get(k).load((JSONObject) saveData.get(k)));
+            loadSave.keySet().forEach((k) -> loadSave.get(k).load((JSONObject) saveData.get(k)));
             fileReader.close();
             Log.info("Data loaded.");
         } catch (FileNotFoundException ex) {
@@ -134,9 +191,11 @@ public class Main extends Plugin {
         }
     }
 
+
+
     public void save() {
         JSONObject saveData = new JSONObject();
-        saveConfigReq.keySet().forEach((k) -> saveData.put(k, saveConfigReq.get(k).save()));
+        loadSave.keySet().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
         try (FileWriter file = new FileWriter(directory + saveFile)) {
             file.write(saveData.toJSONString());
             file.close();
@@ -144,6 +203,14 @@ public class Main extends Plugin {
         } catch (IOException ex) {
             Log.info("Error when saving data.");
         }
+    }
+    private void autoSave(int interval){
+        if (autoSaveThread != null){
+            autoSaveThread.cancel();
+        }
+        interval*=60;
+        autoSaveThread = Timer.schedule(this::save,interval,interval);
+        Log.info("Autosave started.It will save every "+ interval/60 +"min.");
     }
 
     public static boolean isNotInteger(String str) {
@@ -185,6 +252,10 @@ public class Main extends Plugin {
 
     public static boolean isInvalidArg(Player player, String what, String agr) {
         if (isNotInteger(agr)) {
+            if(player==null){
+                Log.info(what + " has to be integer.[scarlet]" + agr + "[] is not.");
+                return true;
+            }
             player.sendMessage(prefix + what + " has to be integer.[scarlet]" + agr + "[] is not.");
             return true;
         }
@@ -202,7 +273,25 @@ public class Main extends Plugin {
     }
 
     public static Player findPlayer(String name) {
-        return playerGroup.find(p -> p.name.equals(name));
+       for(Player p:playerGroup){
+           String pName=cleanName(p.name);
+           if(pName.equals(name)){
+               return p;
+           }
+       };
+       return null;
+    }
+
+    public static String cleanName(String name){
+        while (name.contains("[")){
+            int first=name.indexOf("["),last=name.indexOf("]");
+            name=name.substring(0,first)+name.substring(last+1);
+        }
+        while (name.contains("<")){
+            int first=name.indexOf("<"),last=name.indexOf(">");
+            name=name.substring(0,first)+name.substring(last+1);
+        }
+        return name;
     }
 
     public static Team getTeamByName(String name) {
@@ -268,20 +357,39 @@ public class Main extends Plugin {
             Log.info("Config applied.");
         });
 
-        handler.register("w-trans-time", "<value>", "Sets transport time.", arg -> {
+        handler.register("w-trans-time", "[value]", "Sets transport time.", arg -> {
+            if(arg.length==0){
+                Log.info("trans-time is "+transportTime+".");
+                return;
+            }
             if (isNotInteger(arg[0])) {
                 Log.info(arg[0] + " is not an integer.");
                 return;
             }
             transportTime = Integer.parseInt(arg[0]);
+            Log.info("trans-time set to "+transportTime+".");
+        });
+        handler.register("w-options","shows otions for w command",arg->{
+            for(String key:configured.keySet()){
+                Log.info(key+":"+configured.get(key).getConfig().keySet().toString());
+            }
         });
 
-        handler.register("w", "<target> <property> <value>", "Sets property of target to value/integer.", arg -> {
-            if (!saveConfigReq.containsKey(arg[0])) {
-                Log.info("Invalid target.Valid targets:" + saveConfigReq.keySet().toString());
+        handler.register("w-autoSave","[frequency]","Initializes autosave or stops it.",arg->{
+            int frequency=defaultAutoSaveFrequency;
+            if(!isInvalidArg(null,"Frequency",arg[0])) frequency=Integer.parseInt(arg[0]);
+            if(frequency==0){
+                Log.info("If you want kill-server command so badly, you can open an issue on github.");
                 return;
             }
-            HashMap<String, Integer> config = saveConfigReq.get(arg[0]).get_config();
+            autoSave(frequency);
+        });
+        handler.register("w", "<target> <property> <value>", "Sets property of target to value/integer.", arg -> {
+            if (!configured.containsKey(arg[0])) {
+                Log.info("Invalid target.Valid targets:" + configured.keySet().toString());
+                return;
+            }
+            HashMap<String, Integer> config = configured.get(arg[0]).getConfig();
             if (!config.containsKey(arg[1])) {
                 Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + config.keySet().toString());
                 return;
@@ -293,11 +401,20 @@ public class Main extends Plugin {
             config.put(arg[1], Integer.parseInt(arg[2]));
             Log.info("Property changed.");
         });
+
     }
 
     @Override
     public void registerClientCommands(CommandHandler handler) {
         handler.removeCommand("vote");
+
+        handler.<Player>register("mkgf","<playerName>","adds ,or removes if payer is marked, griefer mark of given " +
+                        "player name.",(arg, player) ->{
+            Package p=antiGrifer.verify(player,arg[0],null,false);
+            if(p==null) return;
+            vote.aVote(antiGrifer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[].",
+                    p.object+" griefer mark");
+                });
 
         handler.<Player>register("l-info", "Shows how mani resource you have stored in the loadout and " +
                 "traveling progress.", (arg, player) -> Call.onInfoMessage(player.con, loadout.info()));
@@ -314,7 +431,7 @@ public class Main extends Plugin {
                 return;
             }
             String where = use ? "core" : "loadout";
-            vote.aVote(loadout, p, "launch " + report(p.object, p.amount) + " to " + where + ". ",
+            vote.aVote(loadout, p, "launch [orange]" + (p.object.equals("all") ? p.amount + " of all" : p.amount + " " + p.object) + "[] to " + where + ".",
                     "launch to " + where);
         });
 
@@ -329,7 +446,7 @@ public class Main extends Plugin {
                 return;
             }
             String what = send ? "send" : "build";
-            vote.aVote(factory, p, what + " " + report(p.object, p.amount) + ". ", what);
+            vote.aVote(factory, p, what + " " + report(p.object, p.amount) + " units.", what+" units");
         });
 
         handler.<Player>register("f-price", "<unitName> [unitAmount]",
@@ -344,7 +461,7 @@ public class Main extends Plugin {
             if (p == null) {
                 return;
             }
-            vote.aVote(builder, p, "building " + arg[0] + " core. ", "core build");
+            vote.aVote(builder, p, "building " + arg[0] + " core.", "core build");
         });
 
         handler.<Player>register("vote", "<map/skipwave/restart/gameover> [indexOrName/waveAmount]", "Opens vote session.",
@@ -355,7 +472,7 @@ public class Main extends Plugin {
                 case "map":
                     p = changer.verify(player, secArg, null, false);
                     if (p == null) return;
-                    vote.aVote(changer, p, "changing map to " + p.map.name() + ". ", "map change");
+                    vote.aVote(changer, p, "changing map to" + ((mindustry.maps.Map)p.obj).name() + ". ", "map change");
                     return;
                 case "skipwave":
                     if (isInvalidArg(player, "Wave amount", secArg)) return;
@@ -364,11 +481,11 @@ public class Main extends Plugin {
                     return;
                 case "restart":
                     vote.aVote(changer, new Package(null ,world.getMap(), player),
-                            "restart the game. ", "reset");
+                            "restart the game.", "reset");
                     return;
                 case "gameover":
                     vote.aVote(changer, new Package(null ,null, player),
-                            "gameover. ", "gameover");
+                            "gameover.", "gameover");
                     return;
                 default:
                     player.sendMessage(prefix + "Invalid first argument.");

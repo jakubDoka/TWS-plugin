@@ -16,4 +16,8 @@ public class Requesting {
         config.put(MAX_TRANSPORT, 5000);
         config.put(THREAD_COUNT, 3);
     }
+
+    public HashMap<String, Integer> getConfig() {
+        return config;
+    }
 }

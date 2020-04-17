@@ -9,7 +9,7 @@ public class Package {
     public boolean toBase;
     public String object;
     public Player target;
-    public mindustry.maps.Map map;
+    public Object obj;
 
     public Package(String object, int amount, boolean toBase, Player target) {
         this.object = object;
@@ -27,9 +27,9 @@ public class Package {
         this.y = y;
     }
 
-    public Package(String object, mindustry.maps.Map map, Player target) {
+    public Package(String object, Object map, Player target) {
         this.object = object;
-        this.map = map;
+        this.obj = map;
         this.target = target;
     }
 }

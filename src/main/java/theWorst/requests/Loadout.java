@@ -216,9 +216,4 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         }
     }
 
-    @Override
-    public HashMap<String, Integer> get_config() {
-        return config;
-    }
-
 }

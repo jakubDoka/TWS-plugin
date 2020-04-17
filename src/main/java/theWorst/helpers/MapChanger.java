@@ -20,7 +20,8 @@ public class MapChanger implements Votable {
 
     @Override
     public void launch(Package p) {
-        if(p.map==null){
+        mindustry.maps.Map map=(mindustry.maps.Map)p.obj;
+        if(map==null){
             Events.fire(new EventType.GameOverEvent(Team.crux));
             return;
         }
@@ -33,7 +34,7 @@ public class MapChanger implements Votable {
 
         logic.reset();
         Call.onWorldDataBegin();
-        world.loadMap(p.map, p.map.applyRules(Gamemode.survival));
+        world.loadMap(map, map.applyRules(Gamemode.survival));
         state.rules = world.getMap().applyRules(Gamemode.survival);
         logic.play();
 

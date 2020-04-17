@@ -28,9 +28,14 @@ public class Vote implements Interruptible {
     int alertIdx = 0;
     int votes = 0;
 
+
     public void aVote(Votable votable, Package aPackage, String message, String report) {
         if (voting) {
             aPackage.target.sendMessage(Main.prefix + "Vote in process.");
+            return;
+        }
+        if (AntiGriefer.isGriefer(aPackage.target)){
+            AntiGriefer.abuse(aPackage.target);
             return;
         }
         this.votable = votable;
@@ -50,13 +55,17 @@ public class Vote implements Interruptible {
             close(false);
         }, 60);
 
-        Call.sendMessage(Main.prefix + aPackage.target.name +
-                "[] started vote for " + message + "Send a message with \"y\" to agree.");
+        Call.sendMessage(Main.prefix +"[orange]"+ aPackage.target.name +
+                "[] started vote for " + message + " Send a message with \"y\" to agree or \"n\" to disagree.");
 
     }
 
     public int getRequired() {
-        int count = playerGroup.size();
+        int count = 0;
+        for(Player p:playerGroup){
+            if(AntiGriefer.isGriefer(p)) continue;
+            count+=1;
+        }
         if (count == 2) {
             return 2;
         }
@@ -68,13 +77,20 @@ public class Vote implements Interruptible {
             player.sendMessage(Main.prefix + "You already voted,sit down!");
             return;
         }
-        votes += vote;
-        if (votes >= getRequired()) {
-
-            close(true);
+        if (AntiGriefer.isGriefer(player)){
+            AntiGriefer.abuse(player);
             return;
         }
-        Call.sendMessage(Main.prefix + (votes - getRequired()) + " more votes needed.");
+        votes += vote;
+        int req=getRequired();
+        if (votes >= req) {
+            close(true);
+            return;
+        }else if(votes<=-req){
+            close(false);
+            return;
+        }
+        Call.sendMessage(Main.prefix + (getRequired() - votes) + " more votes needed.");
     }
 
     public void close(boolean success) {

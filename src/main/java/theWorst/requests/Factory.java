@@ -265,11 +265,6 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
         }
     }
 
-    @Override
-    public HashMap<String, Integer> get_config() {
-        return config;
-    }
-
     public void config() {
         String path = Main.directory + configFile;
         try (FileReader fileReader = new FileReader(path)) {
