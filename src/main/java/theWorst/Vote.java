@@ -1,16 +1,16 @@
 package theWorst;
 
+import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
-
-import arc.util.Timer;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Votable;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
-import static mindustry.Vars.*;
+import static mindustry.Vars.playerGroup;
 
 public class Vote implements Interruptible {
     Votable votable;
@@ -19,7 +19,7 @@ public class Vote implements Interruptible {
     String message;
     String[] alerts = {"vote-50sec", "vote-40sec", "vote-30sec", "vote-20sec", "vote-10sec"};
 
-    ArrayList<String> voted = new ArrayList<>();
+    Set<String> voted = new HashSet<>();
     HashMap<String,Integer> recent = new HashMap<>();
 
     Timer.Task alert;
@@ -107,6 +107,8 @@ public class Vote implements Interruptible {
             player.sendMessage(Main.prefix + "You already voted,sit down!");
             return;
         }
+
+        voted.add(player.uuid);
         if (AntiGriefer.isGriefer(player)){
             AntiGriefer.abuse(player);
             return;
