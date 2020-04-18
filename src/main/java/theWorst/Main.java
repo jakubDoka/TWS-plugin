@@ -286,7 +286,7 @@ public class Main extends Plugin {
     public static Player findPlayer(String name) {
        for(Player p:playerGroup){
            String pName=cleanName(p.name);
-           if(pName.equals(name)){
+           if(pName.replace("_"," ").equals(name)){
                return p;
            }
        };
@@ -425,7 +425,10 @@ public class Main extends Plugin {
             Package p=antiGriefer.verify(player,arg[0],null,false);
             if(p==null) return;
             vote.aVote(antiGriefer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
-                });
+        });
+
+        /*handler.<Player>register("maps","displays all maps",
+                (arg, player) ->Call.onInfoMessage(player.con,changer.info(0)));*/
 
         handler.<Player>register("l-info", "Shows how mani resource you have stored in the loadout and " +
                 "traveling progress.", (arg, player) -> Call.onInfoMessage(player.con, loadout.info()));
