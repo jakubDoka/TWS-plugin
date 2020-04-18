@@ -16,7 +16,7 @@ public class Vote implements Interruptible {
     Votable votable;
     Package aPackage;
 
-    String report;
+    String message;
     String[] alerts = {"vote-50sec", "vote-40sec", "vote-30sec", "vote-20sec", "vote-10sec"};
 
     ArrayList<String> voted = new ArrayList<>();
@@ -29,10 +29,11 @@ public class Vote implements Interruptible {
 
     int voteCooldown =60;
     int alertIdx = 0;
-    int votes = 0;
+    int no, yes;
+    int time;
 
 
-    public void aVote(Votable votable, Package aPackage, String message, String report) {
+    public void aVote(Votable votable, Package aPackage, String message) {
         Player requester=aPackage.target;
         if (voting) {
             requester.sendMessage(Main.prefix + "Vote in process.");
@@ -49,23 +50,22 @@ public class Vote implements Interruptible {
         }
         this.votable = votable;
         this.aPackage = aPackage;
-        this.report = report;
+        this.message = message;
         alertIdx = 0;
-        votes = 0;
+        yes=0;
+        no=0;
+        time=voteCooldown;
         voting = true;
         alert = Timer.schedule(() -> {
-            if (alertIdx == alerts.length) {
-                return;
+            time--;
+            if (time == 0) {
+                alert.cancel();
             }
-            Call.sendMessage(Main.prefix + alerts[alertIdx]);
-            alertIdx++;
-        }, 10, 10);
-        task = Timer.schedule(() -> {
-            close(false);
-        }, 60);
+        }, 0, 1);
+        task = Timer.schedule(() -> close(yes>no), voteCooldown);
 
         Call.sendMessage(Main.prefix +"[orange]"+ requester.name +
-                "[] started vote for " + message + " Send a message with \"y\" to agree or \"n\" to disagree.");
+                "[] started vote for " + message + ". Send a message with \"y\" to agree or \"n\" to disagree.");
 
     }
 
@@ -82,6 +82,7 @@ public class Vote implements Interruptible {
                 if(time==0){
                     recent.remove(player.uuid);
                     this.cancel();
+                    return;
                 }
                 recent.put(player.uuid,time-1);
             }
@@ -101,7 +102,7 @@ public class Vote implements Interruptible {
         return (int) Math.ceil(count / 2.0);
     }
 
-    public void addVote(Player player, int vote) {
+    public void addVote(Player player, String vote) {
         if (voted.contains(player.uuid)) {
             player.sendMessage(Main.prefix + "You already voted,sit down!");
             return;
@@ -110,16 +111,21 @@ public class Vote implements Interruptible {
             AntiGriefer.abuse(player);
             return;
         }
-        votes += vote;
         int req=getRequired();
-        if (votes >= req) {
-            close(true);
-            return;
-        }else if(votes<=-req){
-            close(false);
-            return;
+        if (vote.equals("y")) {
+            yes += 1;
+            if (yes >= req) {
+                close(true);
+                return;
+            }
+        } else {
+            no += 1;
+            if (no >= req) {
+                close(false);
+                return;
+            }
         }
-        Call.sendMessage(Main.prefix + (getRequired() - votes) + " more votes needed.");
+        Call.sendMessage(Main.prefix + (getRequired() -yes) + " more votes needed.");
     }
 
     public void close(boolean success) {
@@ -129,7 +135,7 @@ public class Vote implements Interruptible {
         voting = false;
         task.cancel();
         alert.cancel();
-        String result = Main.prefix + "vote-" + report;
+        String result = Main.prefix + "vote-" + message;
         if (success) {
             result += "-done";
             votable.launch(aPackage);
@@ -143,5 +149,11 @@ public class Vote implements Interruptible {
     @Override
     public void interrupt() {
         close(false);
+    }
+
+    @Override
+    public String getHudInfo() {
+        if(!voting) return null;
+        return "vote for "+message+" "+time+"s [green]"+yes+" [scarlet]"+no;
     }
 }

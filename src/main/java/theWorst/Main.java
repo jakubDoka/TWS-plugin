@@ -17,15 +17,11 @@ import mindustry.plugin.Plugin;
 import mindustry.type.Item;
 import mindustry.type.ItemType;
 
-
-import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import mindustry.type.UnitType;
-import mindustry.world.Tile;
-import mindustry.world.blocks.logic.MessageBlock;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -59,7 +55,8 @@ public class Main extends Plugin {
     public static ArrayList<Item> items = new ArrayList<>();
     ArrayList<Interruptible> interruptibles = new ArrayList<>();
 
-    Timer.Task autoSaveThread=null;
+    Timer.Task autoSaveThread;
+    Timer.Task updateThread;
     int defaultAutoSaveFrequency=5;
 
     Loadout loadout = new Loadout();
@@ -67,26 +64,23 @@ public class Main extends Plugin {
     CoreBuilder builder = new CoreBuilder();
     MapChanger changer = new MapChanger();
     WaveSkipper skipper = new WaveSkipper();
-    AntiGriefer antiGrifer=new AntiGriefer();
+    AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
 
 
     public Main() {
-
         Events.on(PlayerConnect.class, e -> {
-            antiGrifer.addRank(e.player);
+            antiGriefer.addRank(e.player);
         });
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
                 if(AntiGriefer.isGriefer(e.player)){
-                    e.player.sendMessage(AntiGriefer.message);
+                    AntiGriefer.abuse(e.player);
+                    return;
                 }
-                if(e.message.equals("y")) {
-                    vote.addVote(e.player, 1);
-                }
-                else if(e.message.equals("n")){
-                    vote.addVote(e.player,-1);
+                if(e.message.equals("y") || e.message.equals("n")) {
+                    vote.addVote(e.player, e.message);
                 }
             }
         });
@@ -136,16 +130,15 @@ public class Main extends Plugin {
                     return null;
                 }
                 if(AntiGriefer.isGriefer(player)){
-                    Log.info(AntiGriefer.getLastMessageTime(player));
                     if(Time.timeSinceMillis(AntiGriefer.getLastMessageTime(player))<10000L){
                         AntiGriefer.abuse(player);
                         return null;
                     }
                     AntiGriefer.updateLastMessageTime(player);
                 }
-
                 return message;
             });
+
             load_items();
             factory = new Factory(loadout);
             addToGroups();
@@ -154,6 +147,7 @@ public class Main extends Plugin {
             }
             load();
             autoSave(defaultAutoSaveFrequency);
+            updateHud();
         });
 
     }
@@ -164,9 +158,23 @@ public class Main extends Plugin {
         interruptibles.add(vote);
         loadSave.put("loadout", loadout);
         loadSave.put("factory", factory);
-        loadSave.put("griefers", antiGrifer);
+        loadSave.put("griefers", antiGriefer);
         configured.put("loadout", loadout);
         configured.put("factory", factory);
+    }
+
+
+
+    public void updateHud(){
+        updateThread=Timer.schedule(()-> {
+            StringBuilder b=new StringBuilder();
+            for(Interruptible i:interruptibles){
+                String msg=i.getHudInfo();
+                if(msg==null) continue;
+                b.append(msg).append("\n");
+            }
+            Call.setHudText(b.toString().substring(0,b.length()-1));
+        },0,1);
     }
 
     public void load() {
@@ -294,6 +302,7 @@ public class Main extends Plugin {
             int first=name.indexOf("<"),last=name.indexOf(">");
             name=name.substring(0,first)+name.substring(last+1);
         }
+        name=name.replace("_"," ");
         return name;
     }
 
@@ -372,7 +381,7 @@ public class Main extends Plugin {
             transportTime = Integer.parseInt(arg[0]);
             Log.info("trans-time set to "+transportTime+".");
         });
-        handler.register("w-options","shows otions for w command",arg->{
+        handler.register("w-options","shows options for w command",arg->{
             for(String key:configured.keySet()){
                 Log.info(key+":"+configured.get(key).getConfig().keySet().toString());
             }
@@ -413,10 +422,9 @@ public class Main extends Plugin {
 
         handler.<Player>register("mkgf","<playerName>","adds ,or removes if payer is marked, griefer mark of given " +
                         "player name.",(arg, player) ->{
-            Package p=antiGrifer.verify(player,arg[0],null,false);
+            Package p=antiGriefer.verify(player,arg[0],null,false);
             if(p==null) return;
-            vote.aVote(antiGrifer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[].",
-                    p.object+" griefer mark");
+            vote.aVote(antiGriefer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
                 });
 
         handler.<Player>register("l-info", "Shows how mani resource you have stored in the loadout and " +
@@ -426,7 +434,7 @@ public class Main extends Plugin {
                 "traveling progres.", (arg, player) -> Call.onInfoMessage(player.con, factory.info()));
 
         handler.<Player>register("l", "<fill/use> <itemName/all> <itemAmount>",
-                "Fill loadout with resources from core.", (arg, player) -> {
+                "Fill loadout with resources from core/send resources from loadout to core", (arg, player) -> {
             if (isInvalidArg(player, "Item amount", arg[2])) return;
             boolean use = arg[0].equals("use");
             Package p = loadout.verify(player, arg[1], arg[2], use);
@@ -434,8 +442,7 @@ public class Main extends Plugin {
                 return;
             }
             String where = use ? "core" : "loadout";
-            vote.aVote(loadout, p, "launch [orange]" + (p.object.equals("all") ? p.amount + " of all" : p.amount + " " + p.object) + "[] to " + where + ".",
-                    "launch to " + where);
+            vote.aVote(loadout, p, "launch [orange]" + (p.object.equals("all") ? p.amount + " of all" : p.amount + " " + p.object) + "[] to " + where);
         });
 
         handler.<Player>register("f", "<build/send> <unitName/all> [unitAmount]",
@@ -449,7 +456,7 @@ public class Main extends Plugin {
                 return;
             }
             String what = send ? "send" : "build";
-            vote.aVote(factory, p, what + " " + report(p.object, p.amount) + " units.", what+" units");
+            vote.aVote(factory, p, what + " " + report(p.object, p.amount) + " units");
         });
 
         handler.<Player>register("f-price", "<unitName> [unitAmount]",
@@ -464,7 +471,7 @@ public class Main extends Plugin {
             if (p == null) {
                 return;
             }
-            vote.aVote(builder, p, "building " + arg[0] + " core.", "core build");
+            vote.aVote(builder, p, "building " + arg[0] + " core");
         });
 
         handler.<Player>register("vote", "<map/skipwave/restart/gameover> [indexOrName/waveAmount]", "Opens vote session.",
@@ -475,23 +482,23 @@ public class Main extends Plugin {
                 case "map":
                     p = changer.verify(player, secArg, null, false);
                     if (p == null) return;
-                    vote.aVote(changer, p, "changing map to" + ((mindustry.maps.Map)p.obj).name() + ". ", "map change");
+                    vote.aVote(changer, p, "changing map to" + ((mindustry.maps.Map)p.obj).name() + ". ");
                     return;
                 case "skipwave":
                     if (isInvalidArg(player, "Wave amount", secArg)) return;
                     p = skipper.verify(player, null, secArg, false);
-                    vote.aVote(skipper, p, "skipping " + p.amount + " waves. ", "wave skip");
+                    vote.aVote(skipper, p, "skipping " + p.amount + " waves");
                     return;
                 case "restart":
                     vote.aVote(changer, new Package(null ,world.getMap(), player),
-                            "restart the game.", "reset");
+                            "restart the game");
                     return;
                 case "gameover":
                     vote.aVote(changer, new Package(null ,null, player),
-                            "gameover.", "gameover");
+                            "gameover.");
                     return;
                 default:
-                    player.sendMessage(prefix + "Invalid first argument.");
+                    player.sendMessage(prefix + "Invalid first argument");
             }
         });
     }

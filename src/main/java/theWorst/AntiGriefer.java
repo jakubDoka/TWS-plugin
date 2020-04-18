@@ -1,19 +1,16 @@
 package theWorst;
 
+import arc.util.Log;
 import arc.util.Time;
 import mindustry.entities.type.Player;
 
-import arc.struct.Array;
-import mindustry.net.Administration;
 import org.json.simple.JSONObject;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
 import java.util.HashMap;
-import java.util.Map;
 
-import static mindustry.Vars.netServer;
-import static mindustry.Vars.player;
+import static mindustry.Vars.*;
 
 public class AntiGriefer implements Votable, LoadSave {
     public static final String message= Main.prefix+"[pink]Okay griefer.";
@@ -45,7 +42,8 @@ public class AntiGriefer implements Votable, LoadSave {
 
     public void removeRank(Player p){
         p.name=p.name.replace(rank,"");
-        player.sendMessage(Main.prefix+"[pink]You are not griefer anymore.");
+        p.sendMessage(Main.prefix+"[pink]You are not griefer anymore.");
+        Log.info(p.name+" is no longer griefer.");
     }
 
 
@@ -55,12 +53,12 @@ public class AntiGriefer implements Votable, LoadSave {
         if(p.object.equals("remove")){
             griefers.remove(player.uuid);
             removeRank(player);
-
             return;
         }
         updateLastMessageTime(player);
         addRank(player);
         player.sendMessage(Main.prefix+"[pink]You were marked as griefer.");
+        Log.info(player+" wos marked as griefer.");
 
     }
 
@@ -68,21 +66,31 @@ public class AntiGriefer implements Votable, LoadSave {
     public Package verify(Player player, String object, String sAmount, boolean toBase) {
         Player target=Main.findPlayer(object);
         if(target==null){
-            player.sendMessage("Player not found.");
+            StringBuilder b=new StringBuilder();
+            for(Player p:playerGroup){
+                b.append(Main.cleanName(p.name)).append(", ");
+            }
+            player.sendMessage(Main.prefix+"Player not found. Options are: "+b.toString());
+            return null;
+        }
+        if(target == player){
+            player.sendMessage(Main.prefix+"You cannot mark your self.");
             return null;
         }
         if(target.isAdmin){
-            player.sendMessage("You cannot mark admin.");
+            player.sendMessage(Main.prefix+"You cannot mark admin.");
             return null;
         }
+        Package p=new Package(isGriefer(target) ? "remove":"add",target,player);
         if(player.isAdmin){
-            launch(new Package(isGriefer(target) ? "remove":"add",target,player));
+            launch(p);
+            return null;
         }
         if(isGriefer(player)){
             abuse(player);
             return null;
         }
-        return new Package(isGriefer(target) ? "remove":"add",target,player);
+        return p;
     }
 
     @Override

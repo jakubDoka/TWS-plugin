@@ -5,7 +5,7 @@ import theWorst.Package;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Requester;
 
-public class Request implements Interruptible {
+public class Request {
     int time;
 
     boolean stoppable;
@@ -31,8 +31,9 @@ public class Request implements Interruptible {
         this.requester = requester;
         this.aPackage = aPackage;
         this.stoppable = stoppable;
+
         Timer.schedule(task, time);
-        Timer.schedule(countdown, 1, 1);
+        Timer.schedule(countdown, 0, 1);
         terminateTask = Timer.schedule(this::terminate, time);
     }
 
@@ -40,7 +41,6 @@ public class Request implements Interruptible {
         requester.getRequests().remove(this);
     }
 
-    @Override
     public void interrupt() {
         if (!stoppable) {
             return;

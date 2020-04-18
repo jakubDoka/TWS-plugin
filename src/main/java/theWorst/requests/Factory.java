@@ -35,12 +35,14 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     final int BUILD_LIMIT = 10;
     final int BUILD_TIME = 11;
     final int UNIT_COUNT = 12;
+    final String colon="[gray]<F>[]";
 
     final String configFile = "factoryConfig.json";
 
     HashMap<String, int[]> stats = new HashMap<>();
     final ArrayList<String> statKeys = new ArrayList<>();
     Loadout loadout;
+
 
 
     public Factory(Loadout loadout) {
@@ -52,6 +54,24 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
         statKeys.add("build_limit");
         statKeys.add("build_time");
         config();
+    }
+
+
+    public String getHudInfo(){
+        StringBuilder b=new StringBuilder();
+        int free=config.get(THREAD_COUNT);
+        b.append(colon);
+        for (Request r:requests){
+            free-=1;
+            b.append(r.time/60).append(":").append(r.time%60).append(r.stoppable ? " trans ":" build ").append(Main.report(r.aPackage.object,r.aPackage.amount));
+            b.append(colon);
+        }
+        while (free>0){
+            free-=1;
+            b.append("[green]free[]");
+            b.append(colon);
+        }
+        return b.toString();
     }
 
     @Override

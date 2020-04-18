@@ -25,7 +25,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
     int[] storage = new int[10];
 
     final String STORAGE_SIZE = "storage_size";
-
+    final String colon="[gray]<L>[]";
     public Loadout() {
         super();
         config.put(STORAGE_SIZE, 10000000);
@@ -188,6 +188,24 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
     public void interrupt() {
         requests.forEach(Request::interrupt);
         requests.clear();
+    }
+
+    @Override
+    public String getHudInfo() {
+        StringBuilder b=new StringBuilder();
+        int free=config.get(THREAD_COUNT);
+        b.append(colon);
+        for (Request r:requests){
+            free-=1;
+            b.append(r.time/60).append(":").append(r.time%60).append(" trans ").append(Main.report(r.aPackage.object,r.aPackage.amount));
+            b.append(colon);
+        }
+        while (free>0){
+            free-=1;
+            b.append("[green]free[]");
+            b.append(colon);
+        }
+        return b.toString();
     }
 
     @Override
