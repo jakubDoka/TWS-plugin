@@ -197,7 +197,8 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         b.append(colon);
         for (Request r:requests){
             free-=1;
-            b.append(r.time/60).append(":").append(r.time%60).append(" trans ").append(Main.report(r.aPackage.object,r.aPackage.amount));
+            b.append(String.format("%d:%02d", r.time / 60, r.time % 60))
+                    .append(" trans ").append(Main.report(r.aPackage.object,r.aPackage.amount));
             b.append(colon);
         }
         while (free>0){

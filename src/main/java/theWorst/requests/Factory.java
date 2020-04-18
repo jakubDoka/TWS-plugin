@@ -35,7 +35,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     final int BUILD_LIMIT = 10;
     final int BUILD_TIME = 11;
     final int UNIT_COUNT = 12;
-    final String colon="[gra]<F>[]";
+    final String colon="[gray]<F>[]";
 
     final String configFile = "factoryConfig.json";
 

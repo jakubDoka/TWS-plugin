@@ -68,20 +68,20 @@ public class MapChanger implements Votable {
         return new Package(object, map, player);
     }
 
-    public String info(Player player,int page) {
-        Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
+    public String info(int page) {
+        Array<mindustry.maps.Map> maps=Vars.maps.all();
         int pageCount=(int)Math.ceil(maps.size/(float)pageSize);
-        if(page>pageCount){
-            player.sendMessage("there are only "+pageCount+" pages.");
-            page=pageCount;
-        }
+
 
         StringBuilder b=new StringBuilder();
         b.append("[orange]--MAPS--[]\n\n");
-        for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
+        if(page>pageCount){
+            b.append("there are only ").append(pageCount).append(" pages.\n");
+            page=pageCount;
+        }
 
+        for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
             b.append("[yellow]").append(i).append(".[]").append(maps.get(i).name()).append("\n");
-            i++;
         }
         return b.toString();
     }

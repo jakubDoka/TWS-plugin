@@ -15,13 +15,11 @@ import static mindustry.Vars.playerGroup;
 public class Vote implements Interruptible {
     Votable votable;
     Package aPackage;
-    Player target;
 
     String message;
-    String[] alerts = {"vote-50sec", "vote-40sec", "vote-30sec", "vote-20sec", "vote-10sec"};
 
     Set<String> voted = new HashSet<>();
-    static HashMap<String,Integer> recent = new HashMap<>();
+    HashMap<String,Integer> recent = new HashMap<>();
 
     Timer.Task alert;
     Timer.Task task;
@@ -67,10 +65,10 @@ public class Vote implements Interruptible {
                 alert.cancel();
             }
         }, 0, 1);
-        task = Timer.schedule(() -> close(yes>no), voteCooldown);
+        task = Timer.schedule(() -> close(false), voteCooldown);
     }
 
-    private static boolean isRecent(Player player) {
+    private boolean isRecent(Player player) {
         return recent.containsKey(player.uuid);
     }
 
@@ -157,6 +155,6 @@ public class Vote implements Interruptible {
     @Override
     public String getHudInfo() {
         if(!voting) return null;
-        return "vote for "+message+" "+time+"s [green]"+yes+" [scarlet]"+no;
+        return "vote for "+message+" "+String.format("%02d",time)+"s [green]"+yes+" [scarlet]"+no;
     }
 }

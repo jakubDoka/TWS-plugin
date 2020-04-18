@@ -431,7 +431,7 @@ public class Main extends Plugin {
                 (arg, player) -> {
             int page=arg.length==0 || isInvalidArg(player,"Page",arg[0]) || arg[0].equals("0") ?
                     1:Integer.parseInt(arg[0]);
-            Call.onInfoMessage(player.con, changer.info(player,page));
+            Call.onInfoMessage(player.con, changer.info(page));
         });
 
         handler.<Player>register("l-info", "Shows how mani resource you have stored in the loadout and " +
