@@ -1,6 +1,8 @@
 package theWorst;
 
 import arc.Events;
+import arc.struct.Array;
+import arc.struct.ArrayMap;
 import arc.util.CommandHandler;
 import arc.util.Log;
 import arc.util.Time;
@@ -18,8 +20,7 @@ import mindustry.type.Item;
 import mindustry.type.ItemType;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 
 import mindustry.type.UnitType;
 import mindustry.world.blocks.storage.CoreBlock;
@@ -47,13 +48,13 @@ public class Main extends Plugin {
     public static final String prefix = "[scarlet][Server][]";
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
-    public static HashMap<String, LoadSave> loadSave = new HashMap<>();
-    public static HashMap<String, Requesting> configured = new HashMap<>();
+    public static ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
+    public static ArrayMap<String, Requesting> configured = new ArrayMap<>();
 
     public static int transportTime = 3 * 60;
 
-    public static ArrayList<Item> items = new ArrayList<>();
-    ArrayList<Interruptible> interruptibles = new ArrayList<>();
+    public static Array<Item> items = new Array<>();
+    Array<Interruptible> interruptibles = new Array<>();
 
     Timer.Task autoSaveThread;
     Timer.Task updateThread;
@@ -69,9 +70,7 @@ public class Main extends Plugin {
 
 
     public Main() {
-        Events.on(PlayerConnect.class, e -> {
-            antiGriefer.addRank(e.player);
-        });
+        Events.on(PlayerConnect.class, e -> antiGriefer.addRank(e.player));
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
@@ -85,13 +84,11 @@ public class Main extends Plugin {
             }
         });
 
-        Events.on(WorldLoadEvent.class, e ->{
-            interruptibles.forEach(Interruptible::interrupt);
-        });
+        Events.on(WorldLoadEvent.class, e -> interruptibles.forEach(Interruptible::interrupt));
 
         Events.on(EventType.BuildSelectEvent.class, e -> {
-            ArrayList<Request> requests = factory.getRequests();
-            if (requests.size() > 0) {
+            Array<Request> requests = factory.getRequests();
+            if (requests.size > 0) {
                 boolean canPlace = true;
                 for (Request r : requests) {
                     double dist = sqrt((pow(e.tile.x - (float) (r.aPackage.x / 8), 2) +
@@ -183,13 +180,13 @@ public class Main extends Plugin {
             JSONParser jsonParser = new JSONParser();
             Object obj = jsonParser.parse(fileReader);
             JSONObject saveData = (JSONObject) obj;
-            for (String r : loadSave.keySet()) {
+            for (String r : loadSave.keys()) {
                 if (!saveData.containsKey(r)) {
                     Log.info("Failed to load save file.");
                     return;
                 }
             }
-            loadSave.keySet().forEach((k) -> loadSave.get(k).load((JSONObject) saveData.get(k)));
+            loadSave.keys().forEach((k) -> loadSave.get(k).load((JSONObject) saveData.get(k)));
             fileReader.close();
             Log.info("Data loaded.");
         } catch (FileNotFoundException ex) {
@@ -206,7 +203,7 @@ public class Main extends Plugin {
 
     public void save() {
         JSONObject saveData = new JSONObject();
-        loadSave.keySet().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
+        loadSave.keys().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
         try (FileWriter file = new FileWriter(directory + saveFile)) {
             file.write(saveData.toJSONString());
             file.close();
@@ -215,6 +212,7 @@ public class Main extends Plugin {
             Log.info("Error when saving data.");
         }
     }
+
     private void autoSave(int interval){
         if (autoSaveThread != null){
             autoSaveThread.cancel();
@@ -257,10 +255,6 @@ public class Main extends Plugin {
                 "Property will be set to default value.");
     }
 
-    public static void missingPropertyError(String address) {
-        Log.err(address + " is missing.Property will be set to default value.");
-    }
-
     public static boolean isInvalidArg(Player player, String what, String agr) {
         if (isNotInteger(agr)) {
             if(player==null){
@@ -268,6 +262,19 @@ public class Main extends Plugin {
                 return true;
             }
             player.sendMessage(prefix + what + " has to be integer.[scarlet]" + agr + "[] is not.");
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean notEnoughArgs(Player p,int amount,String[] args ){
+        if(args.length!=amount){
+            String m="Not enough arguments.";
+            if(p!=null){
+                p.sendMessage(prefix+m);
+            }else{
+                Log.info(m);
+            }
             return true;
         }
         return false;
@@ -289,7 +296,7 @@ public class Main extends Plugin {
            if(pName.equals(name)){
                return p;
            }
-       };
+       }
        return null;
     }
 
@@ -382,8 +389,8 @@ public class Main extends Plugin {
             Log.info("trans-time set to "+transportTime+".");
         });
         handler.register("w-options","shows options for w command",arg->{
-            for(String key:configured.keySet()){
-                Log.info(key+":"+configured.get(key).getConfig().keySet().toString());
+            for(String key:configured.keys()){
+                Log.info(key+":"+ configured.get(key).getConfig().keys().toString());
             }
         });
 
@@ -398,12 +405,12 @@ public class Main extends Plugin {
         });
         handler.register("w", "<target> <property> <value>", "Sets property of target to value/integer.", arg -> {
             if (!configured.containsKey(arg[0])) {
-                Log.info("Invalid target.Valid targets:" + configured.keySet().toString());
+                Log.info("Invalid target.Valid targets:" + configured.keys().toString());
                 return;
             }
-            HashMap<String, Integer> config = configured.get(arg[0]).getConfig();
+            ArrayMap<String, Integer> config = configured.get(arg[0]).getConfig();
             if (!config.containsKey(arg[1])) {
-                Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + config.keySet().toString());
+                Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + config.keys().toString());
                 return;
             }
             if (isNotInteger(arg[2])) {
@@ -434,15 +441,15 @@ public class Main extends Plugin {
             Call.onInfoMessage(player.con, changer.info(page));
         });
 
-        handler.<Player>register("l-info", "Shows how mani resource you have stored in the loadout and " +
-                "traveling progress.", (arg, player) -> Call.onInfoMessage(player.con, loadout.info()));
-
-        handler.<Player>register("f-info", "Shows how mani units you have in a hangar and building or " +
-                "traveling progres.", (arg, player) -> Call.onInfoMessage(player.con, factory.info()));
-
-        handler.<Player>register("l", "<fill/use> <itemName/all> <itemAmount>",
+        handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
                 "Fill loadout with resources from core/send resources from loadout to core", (arg, player) -> {
+            if(arg[0].equals("info")) {
+                Call.onInfoMessage(player.con, loadout.info());
+                return;
+            }
+            if(notEnoughArgs(player,3,arg))return;
             if (isInvalidArg(player, "Item amount", arg[2])) return;
+
             boolean use = arg[0].equals("use");
             Package p = loadout.verify(player, arg[1], arg[2], use);
             if (p == null) {
@@ -452,18 +459,28 @@ public class Main extends Plugin {
             vote.aVote(loadout, p, "launch [orange]" + (p.object.equals("all") ? p.amount + " of all" : p.amount + " " + p.object) + "[] to " + where);
         });
 
-        handler.<Player>register("f", "<build/send> <unitName/all> [unitAmount]",
+        handler.<Player>register("f", "<build/send/info> [unitName/all] [unitAmount]",
                 "Build amount of unit or Send amount of units from hangar.",
                 (arg, player) -> {
+            if(arg[0].equals("info")) {
+                Call.onInfoMessage(player.con, factory.info());
+                return;
+            }
+            Log.info("F");
+            if(notEnoughArgs(player,3,arg))return;
             String thirdArg = arg.length == 3 ? arg[2] : "1";
+            Log.info("G");
             if (isInvalidArg(player, "Unit amount", thirdArg)) return;
+            Log.info("H");
             boolean send = arg[0].equals("send");
+            Log.info("I");
             Package p = factory.verify(player, arg[1],thirdArg, send);
+                    Log.info("J");
             if (p == null) {
                 return;
             }
-            String what = send ? "send" : "build";
-            vote.aVote(factory, p, what + " " + report(p.object, p.amount) + " units");
+                    Log.info("K");
+            vote.aVote(factory, p, arg[0] + " " + report(p.object, p.amount) + " units");
         });
 
         handler.<Player>register("f-price", "<unitName> [unitAmount]",

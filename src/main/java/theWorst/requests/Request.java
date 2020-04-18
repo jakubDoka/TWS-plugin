@@ -2,8 +2,6 @@ package theWorst.requests;
 
 import arc.util.Timer;
 import theWorst.Package;
-import theWorst.interfaces.Interruptible;
-import theWorst.interfaces.Requester;
 
 public class Request {
     int time;

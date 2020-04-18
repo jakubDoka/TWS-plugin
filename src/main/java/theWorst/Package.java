@@ -32,4 +32,14 @@ public class Package {
         this.obj = map;
         this.target = target;
     }
+
+    public Package(Package p) {
+        this.object = p.object;
+        this.amount = p.amount;
+        this.toBase = p.toBase;
+        this.target = p.target;
+        this.obj = p.obj;
+        this.x = p.x;
+        this.y = p.y;
+    }
 }

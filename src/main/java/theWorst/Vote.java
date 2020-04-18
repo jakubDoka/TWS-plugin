@@ -55,6 +55,7 @@ public class Vote implements Interruptible {
     }
 
     public void restart(){
+        voted.clear();
         yes=0;
         no=0;
         time=voteCooldown;

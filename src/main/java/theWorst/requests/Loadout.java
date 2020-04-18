@@ -1,5 +1,6 @@
 package theWorst.requests;
 
+import arc.struct.Array;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.game.Teams;
@@ -11,11 +12,8 @@ import theWorst.Main;
 import theWorst.Package;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
-import theWorst.interfaces.Requester;
 import theWorst.interfaces.Votable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 
 import static mindustry.Vars.state;
 
@@ -26,6 +24,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
 
     final String STORAGE_SIZE = "storage_size";
     final String colon="[gray]<L>[]";
+
     public Loadout() {
         super();
         config.put(STORAGE_SIZE, 10000000);
@@ -44,52 +43,32 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         if (item == null) {
             return -1;
         }
-        int idx = 0;
-        for (Item i : Main.items) {
-            if (i.name.equals(item.name)) {
-                return idx;
-            }
-            idx++;
-        }
-        return -1;
+        return Main.items.indexOf(item);
     }
 
     public String info() {
         StringBuilder message = new StringBuilder();
         message.append("[orange]--LOADOUT INFO--[]\n\n");
         int size = config.get(STORAGE_SIZE);
-        for (int i = 0; i < Main.items.size(); i++) {
+        for (int i = 0; i < Main.items.size; i++) {
             int amount = storage[i];
             message.append(amount != size ? "[white]" : "[green]");
             message.append(amount).append(Main.itemIcons[i]).append("\n");
         }
-        message.append("[white]\n");
-        int freeShips = config.get(THREAD_COUNT);
-        for (Request r : requests) {
-            message.append(getProgress(r)).append("\n");
-            freeShips--;
-        }
-        message.append("[orange]").append(freeShips).append("[] ships are free.\n");
         return message.toString();
     }
 
     @Override
-    public ArrayList<Request> getRequests() {
+    public Array<Request> getRequests() {
         return requests;
     }
 
     @Override
     public void fail(String object, int amount) {
-        Call.sendMessage("Ship with " + Main.report(object, amount)
+        Call.sendMessage(Main.prefix+"Ship with " + Main.report(object, amount)
                 + " is going back to loadout");
         storage[getItemIdx(getItemByName(object))] += amount;
 
-    }
-
-    @Override
-    public String getProgress(Request request) {
-        return "Ship with " + Main.report(request.aPackage.object, request.aPackage.amount)
-                + " will arrive in " + Main.timeToString(request.time) + ".";
     }
 
     @Override
@@ -111,6 +90,10 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
                 }
             };
             requests.add(new Request(Main.transportTime, task, this, p, true));
+            if(p.amount!=amount){
+                launch(new Package(p.object,p.amount-amount,p.toBase,p.target));
+            }
+                p.amount=amount;
         } else {
             if (amount == -1) {
                 idx = 0;
@@ -131,7 +114,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
 
     @Override
     public Package verify(Player player, String object, String sAmount, boolean toBase) {
-        if (requests.size() == config.get(THREAD_COUNT) && toBase) {
+        if (requests.size == config.get(THREAD_COUNT) && toBase) {
             player.sendMessage(Main.prefix + " All the ships are occupied at the moment.");
             return null;
         }

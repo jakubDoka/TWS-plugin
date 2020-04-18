@@ -1,5 +1,6 @@
 package theWorst;
 
+import arc.struct.ArrayMap;
 import arc.util.Log;
 import arc.util.Time;
 import mindustry.entities.type.Player;
@@ -15,7 +16,7 @@ import static mindustry.Vars.*;
 public class AntiGriefer implements Votable, LoadSave {
     public static final String message= Main.prefix+"[pink]Okay griefer.";
     public static final String rank="[pink]<Griefer>";
-    static HashMap<String ,Long> griefers=new HashMap<>();
+    static ArrayMap<String ,Long> griefers=new ArrayMap<>();
 
     public static boolean isGriefer(Player player){
         return griefers.containsKey(player.uuid);
@@ -51,7 +52,7 @@ public class AntiGriefer implements Votable, LoadSave {
     public void launch(Package p) {
         Player player=((Player)p.obj);
         if(p.object.equals("remove")){
-            griefers.remove(player.uuid);
+            griefers.removeKey(player.uuid);
             removeRank(player);
             return;
         }
@@ -106,7 +107,7 @@ public class AntiGriefer implements Votable, LoadSave {
     @Override
     public JSONObject save() {
         JSONObject data=new JSONObject();
-        for(String key:griefers.keySet()){
+        for(String key:griefers.keys()){
             data.put(key,griefers.get(key));
         }
         return data;
