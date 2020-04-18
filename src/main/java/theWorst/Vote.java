@@ -15,12 +15,13 @@ import static mindustry.Vars.*;
 public class Vote implements Interruptible {
     Votable votable;
     Package aPackage;
+    Player target;
 
     String message;
     String[] alerts = {"vote-50sec", "vote-40sec", "vote-30sec", "vote-20sec", "vote-10sec"};
 
     ArrayList<String> voted = new ArrayList<>();
-    HashMap<String,Integer> recent = new HashMap<>();
+    static HashMap<String,Integer> recent = new HashMap<>();
 
     Timer.Task alert;
     Timer.Task task;
@@ -28,7 +29,6 @@ public class Vote implements Interruptible {
     boolean voting = false;
 
     int voteCooldown =60;
-    int alertIdx = 0;
     int no, yes;
     int time;
 
@@ -39,7 +39,7 @@ public class Vote implements Interruptible {
             requester.sendMessage(Main.prefix + "Vote in process.");
             return;
         }
-        if (AntiGriefer.isGriefer(requester)){
+        if ( AntiGriefer.isGriefer(requester)){
             AntiGriefer.abuse(requester);
             return;
         }
@@ -51,7 +51,12 @@ public class Vote implements Interruptible {
         this.votable = votable;
         this.aPackage = aPackage;
         this.message = message;
-        alertIdx = 0;
+        restart();
+        Call.sendMessage(Main.prefix +"[orange]"+  requester.name +
+                "[] started vote for " + message + ". Send a message with \"y\" to agree or \"n\" to disagree.");
+    }
+
+    public void restart(){
         yes=0;
         no=0;
         time=voteCooldown;
@@ -63,13 +68,9 @@ public class Vote implements Interruptible {
             }
         }, 0, 1);
         task = Timer.schedule(() -> close(yes>no), voteCooldown);
-
-        Call.sendMessage(Main.prefix +"[orange]"+ requester.name +
-                "[] started vote for " + message + ". Send a message with \"y\" to agree or \"n\" to disagree.");
-
     }
 
-    private boolean isRecent(Player player) {
+    private static boolean isRecent(Player player) {
         return recent.containsKey(player.uuid);
     }
 
@@ -138,7 +139,7 @@ public class Vote implements Interruptible {
         String result = Main.prefix + "vote-" + message;
         if (success) {
             result += "-done";
-            votable.launch(aPackage);
+                votable.launch(aPackage);
         } else {
             result += "-failed";
             addToRecent(aPackage.target);

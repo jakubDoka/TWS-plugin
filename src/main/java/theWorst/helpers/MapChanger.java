@@ -17,7 +17,7 @@ import theWorst.interfaces.Votable;
 import static mindustry.Vars.*;
 
 public class MapChanger implements Votable {
-
+    int pageSize=15;
     @Override
     public void launch(Package p) {
         mindustry.maps.Map map=(mindustry.maps.Map)p.obj;
@@ -66,5 +66,23 @@ public class MapChanger implements Votable {
             return null;
         }
         return new Package(object, map, player);
+    }
+
+    public String info(Player player,int page) {
+        Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
+        int pageCount=(int)Math.ceil(maps.size/(float)pageSize);
+        if(page>pageCount){
+            player.sendMessage("there are only "+pageCount+" pages.");
+            page=pageCount;
+        }
+
+        StringBuilder b=new StringBuilder();
+        b.append("[orange]--MAPS--[]\n\n");
+        for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
+
+            b.append("[yellow]").append(i).append(".[]").append(maps.get(i).name()).append("\n");
+            i++;
+        }
+        return b.toString();
     }
 }
