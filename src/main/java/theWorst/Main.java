@@ -68,8 +68,9 @@ public class Main extends Plugin {
     CoreBuilder builder = new CoreBuilder();
     MapChanger changer = new MapChanger();
     WaveSkipper skipper = new WaveSkipper();
-    AntiGriefer antiGriefer=new AntiGriefer();
+
     DataBase dataBase=new DataBase();
+    AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
 
 
@@ -79,9 +80,20 @@ public class Main extends Plugin {
             antiGriefer.addRank(e.player);
         });
 
-        /*Events.on(BlockBuildEndEvent.class, e->{
+        /*Events.on(GameOverEvent.class, e ->{
+            for(Player p:playerGroup){
+                if(p.getTeam()==e.winner){
+                    dataBase.updateWinCount(p);
+                }else {
+                    dataBase.updateGameCount(p);
+                }
+            }
+        });
+
+        Events.on(BlockBuildEndEvent.class, e->{
             dataBase.updateBuildCount(e.player);
                 });
+
         Events.on(EventType.UnitDestroyEvent.class, e->{
             if(e.unit instanceof Player){
                 dataBase.updateDeathCount((Player)e.unit);
@@ -140,7 +152,7 @@ public class Main extends Plugin {
                     AntiGriefer.abuse(player);
                     return false;
                 }
-                return action.type != Administration.ActionType.rotate;
+                return true;
             });
             netServer.admins.addChatFilter((player,message)->{
                 if((message.equals("y") || message.equals("n")) && vote.voting){
@@ -365,12 +377,12 @@ public class Main extends Plugin {
     public void registerServerCommands(CommandHandler handler) {
         handler.register("w-load", "Reloads theWorst saved data.", arg -> {
             load();
-            //dataBase.load();
+            dataBase.load();
         });
 
         handler.register("w-save", "Saves theWorst data.", arg -> {
             save();
-            //dataBase.save();
+            dataBase.save();
         });
 
         /*handler.register("set-rank","<uuid> <rank>","",arg->{
@@ -426,7 +438,7 @@ public class Main extends Plugin {
         });
         handler.register("w-options","shows options for w command",arg->{
             for(String key:configured.keys()){
-                Log.info(key+":"+ configured.get(key).getConfig().keys().toString());
+                Log.info(key+":"+ configured.get(key).getConfig().keys().toArray().toString());
             }
         });
 
@@ -446,7 +458,7 @@ public class Main extends Plugin {
             }
             ArrayMap<String, Integer> config = configured.get(arg[0]).getConfig();
             if (!config.containsKey(arg[1])) {
-                Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + config.keys().toString());
+                Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + config.keys().toArray().toString());
                 return;
             }
             if (isNotInteger(arg[2])) {

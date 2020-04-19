@@ -12,10 +12,10 @@ public enum Rank implements java.io.Serializable{
             return data.playTime>50;
         }
     },
-    kamikaze(Color.red){
+    kamikaze(Items.blastCompound.color){
         @Override
         public boolean condition(PlayerData data) {
-            return data.deaths>1000;
+            return data.deaths>1;
         }
     },
     builder(Items.plastanium.color,1){
@@ -23,7 +23,23 @@ public enum Rank implements java.io.Serializable{
         public boolean condition(PlayerData data) {
             return data.buildingsBuilt>10;
         }
-    };
+    },
+    veteran(Items.phasefabric.color,2){
+        @Override
+        public boolean condition(PlayerData data) {
+            return data.gamesPlayed>10;
+        }
+    },
+    general(Items.surgealloy.color,2){
+        @Override
+        public boolean condition(PlayerData data) {
+            return data.gamesWon>10;
+        }
+    },
+    moderator(Color.royal,4),
+    owner(Color.gold,5)
+
+    ;
     Color color;
     int permission=0;
 

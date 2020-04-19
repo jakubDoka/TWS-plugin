@@ -46,6 +46,10 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         return Main.items.indexOf(item);
     }
 
+    private boolean canTransport() {
+        return requests.size<config.get(THREAD_COUNT);
+    }
+
     public String info() {
         StringBuilder message = new StringBuilder();
         message.append("[orange]--LOADOUT INFO--[]\n\n");
@@ -90,7 +94,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
                 }
             };
             requests.add(new Request(Main.transportTime, task, this, p, true));
-            if(p.amount!=amount){
+            if(p.amount!=amount && canTransport()){
                 launch(new Package(p.object,p.amount-amount,p.toBase,p.target));
             }
                 p.amount=amount;
