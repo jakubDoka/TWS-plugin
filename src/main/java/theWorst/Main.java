@@ -27,6 +27,8 @@ import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import theWorst.dataBase.DataBase;
+import theWorst.dataBase.PlayerData;
 import theWorst.helpers.CoreBuilder;
 import theWorst.helpers.MapChanger;
 import theWorst.helpers.WaveSkipper;
@@ -58,6 +60,7 @@ public class Main extends Plugin {
 
     Timer.Task autoSaveThread;
     Timer.Task updateThread;
+
     int defaultAutoSaveFrequency=5;
 
     Loadout loadout = new Loadout();
@@ -66,11 +69,28 @@ public class Main extends Plugin {
     MapChanger changer = new MapChanger();
     WaveSkipper skipper = new WaveSkipper();
     AntiGriefer antiGriefer=new AntiGriefer();
+    DataBase dataBase=new DataBase();
     Vote vote = new Vote();
 
 
     public Main() {
-        Events.on(PlayerConnect.class, e -> antiGriefer.addRank(e.player));
+        Events.on(PlayerConnect.class, e ->{
+            //dataBase.register(e.player);
+            antiGriefer.addRank(e.player);
+        });
+
+        /*Events.on(BlockBuildEndEvent.class, e->{
+            dataBase.updateBuildCount(e.player);
+                });
+        Events.on(EventType.UnitDestroyEvent.class, e->{
+            if(e.unit instanceof Player){
+                dataBase.updateDeathCount((Player)e.unit);
+            }else if(e.unit.getTeam()==Team.crux){
+                for(Player p:playerGroup){
+                    dataBase.updateKillCount(p);
+                }
+            }
+        });*/
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
@@ -299,6 +319,9 @@ public class Main extends Plugin {
        }
        return null;
     }
+    public static Player findPlayerByUuid(String uuid){
+        return playerGroup.find(p->p.uuid.equals(uuid));
+    }
 
     public static String cleanName(String name){
         while (name.contains("[")){
@@ -340,9 +363,22 @@ public class Main extends Plugin {
 
     @Override
     public void registerServerCommands(CommandHandler handler) {
-        handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
+        handler.register("w-load", "Reloads theWorst saved data.", arg -> {
+            load();
+            //dataBase.load();
+        });
 
-        handler.register("w-save", "Saves theWorst data.", arg -> save());
+        handler.register("w-save", "Saves theWorst data.", arg -> {
+            save();
+            //dataBase.save();
+        });
+
+        /*handler.register("set-rank","<uuid> <rank>","",arg->{
+            dataBase.setRank(findPlayerByUuid(arg[0]),arg[1]);
+                });
+        handler.register("w-read","",arg->{
+            Log.info(dataBase.info());
+                });*/
 
         handler.register("spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
             if (playerGroup.size() == 0) {
@@ -426,6 +462,7 @@ public class Main extends Plugin {
     @Override
     public void registerClientCommands(CommandHandler handler) {
         handler.removeCommand("vote");
+        handler.removeCommand("maps");
 
         handler.<Player>register("mkgf","<playerName>","adds ,or removes if payer is marked, griefer mark of given " +
                         "player name.",(arg, player) ->{
@@ -467,7 +504,7 @@ public class Main extends Plugin {
                 return;
             }
             Log.info("F");
-            if(notEnoughArgs(player,3,arg))return;
+            if(!(arg.length==2 && arg[1].equals("all")) &&  notEnoughArgs(player,3,arg)) return;
             String thirdArg = arg.length == 3 ? arg[2] : "1";
             Log.info("G");
             if (isInvalidArg(player, "Unit amount", thirdArg)) return;

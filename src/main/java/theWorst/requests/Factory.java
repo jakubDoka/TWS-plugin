@@ -111,9 +111,8 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             if (p.object.equals("all")) {
                 for (String name : stats.keys()) {
                     used+=addUnits(getUnitByName(name), units, p.target, -1, p.x, p.y);
-                    all=getUnitCount("all");
-
                 }
+                all=getUnitCount("all");
             } else {
                 used=addUnits(getUnitByName(p.object), units, p.target, p.amount, p.x, p.y);
                 all=p.amount;
