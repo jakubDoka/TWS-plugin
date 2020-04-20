@@ -27,8 +27,6 @@ import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import theWorst.dataBase.DataBase;
-import theWorst.dataBase.PlayerData;
 import theWorst.helpers.CoreBuilder;
 import theWorst.helpers.MapChanger;
 import theWorst.helpers.WaveSkipper;
@@ -69,40 +67,16 @@ public class Main extends Plugin {
     MapChanger changer = new MapChanger();
     WaveSkipper skipper = new WaveSkipper();
 
-    DataBase dataBase=new DataBase();
     AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
 
 
     public Main() {
         Events.on(PlayerConnect.class, e ->{
-            //dataBase.register(e.player);
             antiGriefer.addRank(e.player);
         });
 
-        /*Events.on(GameOverEvent.class, e ->{
-            for(Player p:playerGroup){
-                if(p.getTeam()==e.winner){
-                    dataBase.updateWinCount(p);
-                }else {
-                    dataBase.updateGameCount(p);
-                }
-            }
-        });
 
-        Events.on(BlockBuildEndEvent.class, e->{
-            dataBase.updateBuildCount(e.player);
-                });
-
-        Events.on(EventType.UnitDestroyEvent.class, e->{
-            if(e.unit instanceof Player){
-                dataBase.updateDeathCount((Player)e.unit);
-            }else if(e.unit.getTeam()==Team.crux){
-                for(Player p:playerGroup){
-                    dataBase.updateKillCount(p);
-                }
-            }
-        });*/
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
@@ -377,20 +351,11 @@ public class Main extends Plugin {
     public void registerServerCommands(CommandHandler handler) {
         handler.register("w-load", "Reloads theWorst saved data.", arg -> {
             load();
-            dataBase.load();
         });
 
         handler.register("w-save", "Saves theWorst data.", arg -> {
             save();
-            dataBase.save();
         });
-
-        /*handler.register("set-rank","<uuid> <rank>","",arg->{
-            dataBase.setRank(findPlayerByUuid(arg[0]),arg[1]);
-                });
-        handler.register("w-read","",arg->{
-            Log.info(dataBase.info());
-                });*/
 
         handler.register("spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
             if (playerGroup.size() == 0) {

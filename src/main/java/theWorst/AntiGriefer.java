@@ -6,8 +6,6 @@ import arc.util.Time;
 import mindustry.entities.type.Player;
 
 import org.json.simple.JSONObject;
-import theWorst.dataBase.DataBase;
-import theWorst.dataBase.Rank;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
