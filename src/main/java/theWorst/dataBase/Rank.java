@@ -34,51 +34,61 @@ public enum Rank implements java.io.Serializable{
     depositor(Items.surgealloy.color,Perm.loadout){
         {
             permanent=false;
+            required=300;
+            frequency=4;
         }
         @Override
         public boolean condition(Player player) {
             PlayerData data=DataBase.getData(player);
-            return data.loadoutVotes>300 && data.loadoutVotes/(data.playTime/(1000*60*60))>4;
+            return check(data,data.loadoutVotes);
         }
     },
-    constructor(Items.phasefabric.color,Perm.factory){
+    general(Items.phasefabric.color,Perm.factory){
         {
             permanent=false;
+            required=300;
+            frequency=4;
         }
         @Override
         public boolean condition(Player player) {
             PlayerData data=DataBase.getData(player);
-            return data.factoryVotes>300 && data.factoryVotes/(data.playTime/(1000*60*60))>4;
+            return check(data,data.factoryVotes);
         }
     },
     kamikaze(Items.blastCompound.color,Perm.suicide){
         {
             permanent=false;
+            required=5000;
+            frequency=10;
         }
         @Override
         public boolean condition(Player player) {
             PlayerData data=DataBase.getData(player);
-            return data.deaths>5000 && data.deaths/(data.playTime/(1000*60*60))>10;
+            return check(data,data.deaths);
         }
     },
     builder(Items.plastanium.color,Perm.build){
         {
             permanent=false;
+            required=30000;
+            frequency=1000;
         }
         @Override
         public boolean condition(Player player) {
             PlayerData data=DataBase.getData(player);
-            return data.buildingsBuilt>30000 && data.buildingsBuilt/(data.playTime/(1000*60*60))>1000;
+            return check(data,data.buildingsBuilt);
         }
     },
     bulldozer(Items.pyratite.color,Perm.destruct){
         {
             permanent=false;
+            required=10000;
+            frequency=200;
         }
         @Override
         public boolean condition(Player player) {
             PlayerData data=DataBase.getData(player);
-            return data.buildingsBroken>4000 && data.buildingsBroken/(data.playTime/(1000*60*60))>300;
+            return check(data,data.buildingsBroken);
         }
     },
     owner(Color.gold,Perm.highest);
@@ -86,6 +96,8 @@ public enum Rank implements java.io.Serializable{
     Perm permission=Perm.normal;
     boolean displayed=true;
     boolean permanent=true;
+    int required = 0;
+    int frequency = 0;
     String description="missing description";
 
     public int getValue() {
@@ -114,5 +126,9 @@ public enum Rank implements java.io.Serializable{
 
     public boolean condition(Player player) {
         return false;
+    }
+
+    public boolean check(PlayerData pd,int value){
+        return value>required && value/(pd.playTime/(1000*60*60))>frequency;
     }
 }

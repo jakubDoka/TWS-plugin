@@ -39,18 +39,24 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     }
 
     public String toString(){
+        String special=trueRank==rank ? "none":"[#"+rank.color + "]" + rank.name() + "[]";
+        String activity=connected>lastActive ? "[green]currently active[]":
+                "[gray]inactive for []" + Main.milsToTime(Time.timeSinceMillis(lastActive)) + "\n";
         return "[orange]==PLayer data==[]\n\n" +
-                "name: " + originalName + "\n" +
-                "rank: [#"+rank.color + "]" + rank.name() + "[]\n" +
-                "playtime: " + Main.milsToTime(playTime) + "\n" +
-                "born date: " + new Date(born).toString() + "\n" +
-                "last active:" + new Date(lastActive).toString() + "\n" +
-                "games played: " + gamesPlayed + "\n" +
-                "games won: " + gamesWon + "\n" +
-                "buildings built: " +buildingsBuilt + "\n" +
-                "buildings broken: " +buildingsBroken + "\n" +
-                "enemies killed: " + enemiesKilled + "\n" +
-                "deaths: " + deaths;
+                "[gray]name:[] " + originalName + "\n" +
+                "[gray]rank:[] [#"+trueRank.color + "]" + trueRank.name() + "[]\n" +
+                "[gray]special rank:[] " + special + "\n" +
+                "[gray]playtime:[] " + Main.milsToTime(playTime) + "\n" +
+                "[gray]server age:" + Main.milsToTime(Time.timeSinceMillis(born)) + "\n" +
+                activity + "\n" +
+                "[gray]games played:[] " + gamesPlayed + "\n" +
+                "[gray]games won:[] " + gamesWon + "\n" +
+                "[gray]buildings built:[] " +buildingsBuilt + "\n" +
+                "[gray]buildings broken:[] " +buildingsBroken + "\n" +
+                "[gray]successful loadout votes:[] " +loadoutVotes+"\n" +
+                "[gray]successful factory votes:[] " +factoryVotes+"\n" +
+                "[gray]enemies killed:[] " + enemiesKilled + "\n" +
+                "[gray]deaths:[] " + deaths;
     }
 
     public Object clone() throws CloneNotSupportedException{return super.clone();}

@@ -2,7 +2,6 @@ package theWorst.dataBase;
 
 import arc.util.Log;
 import mindustry.entities.type.Player;
-import mindustry.game.Stats;
 import mindustry.gen.Call;
 import theWorst.Main;
 
@@ -11,16 +10,34 @@ import java.util.HashMap;
 
 public class DataBase {
     static HashMap<String,PlayerData> data=new HashMap<>();
-    String saveFile= Main.directory+"database.ser";
+    final String saveFile= Main.directory+"database.ser";
 
 
 
     public static PlayerData getData(Player player){
         return data.get(player.uuid);
     }
+
     public static PlayerData getData(String uuid){
         return data.get(uuid);
     }
+
+    public static PlayerData getData(int idx){
+        if(idx>data.keySet().size()){
+            return null;
+        }
+        return (PlayerData) data.values().toArray()[idx];
+    }
+
+    public static PlayerData findData(String arg){
+        if(!Main.isNotInteger(arg)){
+            return getData(Integer.parseInt(arg));
+        }
+        Player p=Main.findPlayer(arg);
+        if(p!=null) return getData(p);
+        return getData(arg);
+    }
+
     public static Rank getRank(Player player){
         return getData(player).rank;
     }

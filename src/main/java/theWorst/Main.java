@@ -95,8 +95,12 @@ public class Main extends Plugin {
             }
         });
 
-        Events.on(BlockBuildEndEvent.class, e->
-                dataBase.updateStats(e.player,e.breaking ? Stat.buildingsBroken:Stat.buildingsBuilt));
+        Events.on(BlockBuildEndEvent.class, e->{
+            
+            if(e.tile.block().buildCost/60<1) return;
+
+            dataBase.updateStats(e.player,e.breaking ? Stat.buildingsBroken:Stat.buildingsBuilt);
+        });
         Events.on(BuildSelectEvent.class, e->{
             if(e.builder instanceof Player){
                 Player player=(Player)e.builder;
@@ -228,7 +232,7 @@ public class Main extends Plugin {
         long min=sec/60;
         long hour=min/60;
         long days=hour/24;
-        return String.format("%d-day/%02d-hour/%02d-min/%02d-sec",
+        return String.format("%d:%02d:%02d:%02d",
                 days%365,hour%24,min%60,sec%60);
     }
 
@@ -429,41 +433,37 @@ public class Main extends Plugin {
 
     @Override
     public void registerServerCommands(CommandHandler handler) {
-        handler.register("w-load", "Reloads theWorst saved data.", arg -> {
-            load();
-        });
+        handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
 
-        handler.register("w-save", "Saves theWorst data.", arg -> {
-            save();
-
-        });
+        handler.register("w-save", "Saves theWorst data.", arg -> save());
 
         handler.register("w-database","[search]", "Shows database,list of all players that ewer been on server.Use search as in browser.",
-                arg -> {
-            Log.info(dataBase.report(arg.length==1 ? arg[0]:null));
-        });
+                arg -> Log.info(dataBase.report(arg.length==1 ? arg[0]:null)));
 
-        handler.register("w-set-rank","<uuid/name> <rank>","",arg->{
-
+        handler.register("w-set-rank","<uuid/name/index> <rank>","",arg->{
             try{
                 Rank.valueOf(arg[1]);
             }catch (IllegalArgumentException e){
-                Log.info("Rank no found. Ranks:"+ Arrays.toString(Rank.values()));
+                Log.info("Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
                 return;
             }
-            if(DataBase.getData(arg[0])==null){
+            PlayerData pd=DataBase.findData(arg[0]);
+            if(pd==null ){
                 Log.info("Player not found.");
+                return;
             }
-            DataBase.getData(arg[0]).rank=Rank.valueOf(arg[1]);
-            Player p=findPlayerByUuid(arg[0]);
-            if (p!=null){
-                DataBase.setRank(p,arg[1]);
-            }
+            pd.rank=Rank.valueOf(arg[1]);
         });
 
-        handler.register("w-read","<uuid>","",arg->{
-            Log.info(DataBase.getData(findPlayerByUuid(arg[0])).toString());
-                });
+        handler.register("w-info","<uuid/name/index>","Displays info about player.",arg->{
+            PlayerData pd=DataBase.findData(arg[0]);
+            Player p=findPlayerByUuid(arg[0]);
+            if(pd==null ) {
+                Log.info("Player not found.Search by name applies only on online players.");
+                return;
+            }
+            Log.info(pd.toString());
+        });
 
         handler.register("spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
             if (playerGroup.size() == 0) {
@@ -657,10 +657,9 @@ public class Main extends Plugin {
             Timer.schedule(()->Call.sendMessage(prefix+"F..."),5);
         });
 
-        handler.<Player>register("hud","<on/off/info> [page]","Enable or disable hud information."
-                ,(arg, player) -> {
-            DataBase.getData(player).hudEnabled=arg[0].equals("on");
-                });
-
+        handler.<Player>register("hud","<on/off> [page]","Enable or disable hud information."
+                ,(arg, player) -> DataBase.getData(player).hudEnabled=arg[0].equals("on"));
+        handler.<Player>register("info","Displays info about you.",
+                (arg,player)-> Call.onInfoMessage(player.con,DataBase.getData(player).toString()));
     }
 }
