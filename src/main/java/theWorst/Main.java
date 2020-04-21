@@ -649,8 +649,8 @@ public class Main extends Plugin {
         });
         handler.<Player>register("suicide","Kill your self.",(arg, player) -> {
             if(!DataBase.hasPerm(player,Perm.suicide)){
-
                 player.sendMessage("You have to be "+Rank.kamikaze.getRank()+" to suicide.");
+                return;
             }
             player.onDeath();
             Call.sendMessage(prefix+player.name+" committed suicide.");
