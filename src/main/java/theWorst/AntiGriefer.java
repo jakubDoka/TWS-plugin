@@ -17,11 +17,12 @@ import static mindustry.Vars.*;
 
 public class AntiGriefer implements Votable, LoadSave {
     public static final String message= Main.prefix+"[pink]Okay griefer.";
-    public static final String rank="[pink]<Griefer>";
+    //public static final String rank="[pink]<Griefer>";
     static ArrayMap<String ,Long> griefers=new ArrayMap<>();
+    static boolean emergency=false;
 
     public static boolean isGriefer(Player player){
-        return griefers.containsKey(player.uuid);
+        return DataBase.getRank(player)==Rank.griefer;
     }
 
     public static void abuse(Player player){
@@ -29,7 +30,11 @@ public class AntiGriefer implements Votable, LoadSave {
         player.sendMessage(message);
     }
 
-    public static Long getLastMessageTime(Player player){
+    public boolean isEmergency(){
+        return emergency;
+    }
+
+    /*public static Long getLastMessageTime(Player player){
         return griefers.get(player.uuid);
     }
 
@@ -47,19 +52,19 @@ public class AntiGriefer implements Votable, LoadSave {
         p.name=p.name.replace(rank,"");
         p.sendMessage(Main.prefix+"[pink]You are not griefer anymore.");
         Log.info(p.name+" is no longer griefer.");
-    }
+    }*/
 
 
     @Override
     public void launch(Package p) {
         Player player=((Player)p.obj);
         if(p.object.equals("remove")){
-            griefers.removeKey(player.uuid);
-            removeRank(player);
+            DataBase.restartRank(player);
+            player.sendMessage(Main.prefix+"[pink]Your rank wos restarted.");
+            Log.info(player+" is no longer griefer.");
             return;
         }
-        updateLastMessageTime(player);
-        addRank(player);
+        DataBase.setRank(player,Rank.griefer);
         player.sendMessage(Main.prefix+"[pink]You were marked as griefer.");
         Log.info(player+" wos marked as griefer.");
 
@@ -113,5 +118,9 @@ public class AntiGriefer implements Votable, LoadSave {
             data.put(key,griefers.get(key));
         }
         return data;
+    }
+
+    public void switchEmergency() {
+        emergency=!emergency;
     }
 }

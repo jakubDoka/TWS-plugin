@@ -3,8 +3,13 @@ package theWorst;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
+import theWorst.dataBase.DataBase;
+import theWorst.dataBase.Perm;
+import theWorst.dataBase.Rank;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Votable;
+import theWorst.requests.Factory;
+import theWorst.requests.Loadout;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,11 +38,15 @@ public class Vote implements Interruptible {
 
     public void aVote(Votable votable, Package aPackage, String message) {
         Player requester=aPackage.target;
+        if(DataBase.hasPerm(requester, Perm.highest)){
+            votable.launch(aPackage);
+            return;
+        }
         if (voting) {
             requester.sendMessage(Main.prefix + "Vote in process.");
             return;
         }
-        if ( AntiGriefer.isGriefer(requester)){
+        if (AntiGriefer.isGriefer(requester)){
             AntiGriefer.abuse(requester);
             return;
         }
@@ -74,6 +83,7 @@ public class Vote implements Interruptible {
     }
 
     public void addToRecent(Player player){
+        if(DataBase.hasPerm(player, Perm.high.getValue()))return;
         recent.put(player.uuid, voteCooldown);
         Timer.schedule(new Timer.Task(){
             @Override

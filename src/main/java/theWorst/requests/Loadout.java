@@ -10,6 +10,8 @@ import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import theWorst.Main;
 import theWorst.Package;
+import theWorst.dataBase.DataBase;
+import theWorst.dataBase.Perm;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
@@ -78,6 +80,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
     @Override
     public void launch(Package p) {
         Timer.Task task;
+        DataBase.getData(p.target).loadoutVotes++;
         Item targetItem = getItemByName(p.object);
         CoreBlock.CoreEntity core = getCore(p.target);
         int amount = getTransportAmount(targetItem, p.amount, core, p.toBase);
@@ -133,8 +136,12 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             player.sendMessage(Main.prefix + "Nothing to transport.");
             return null;
         }
-
-        return new Package(object, amount, toBase, player);
+        Package p=new Package(object, amount, toBase, player);
+        if(DataBase.hasSpecialPerm(player, Perm.loadout)){
+            launch(p);
+            return null;
+        }
+        return p;
     }
 
     public static CoreBlock.CoreEntity getCore(Player p) {

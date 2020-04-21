@@ -7,6 +7,7 @@ import arc.util.CommandHandler;
 import arc.util.Log;
 import arc.util.Time;
 import arc.util.Timer;
+import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.base.BuilderDrone;
@@ -14,9 +15,9 @@ import mindustry.game.EventType;
 import mindustry.game.EventType.*;
 import mindustry.game.Team;
 import mindustry.gen.Call;
-import mindustry.net.Administration;
 import mindustry.plugin.Plugin;
 import mindustry.type.Item;
+import mindustry.type.ItemStack;
 import mindustry.type.ItemType;
 
 import java.io.*;
@@ -24,11 +25,11 @@ import java.util.Arrays;
 
 import mindustry.type.UnitType;
 import mindustry.world.blocks.storage.CoreBlock;
+import mindustry.world.modules.ItemModule;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import theWorst.dataBase.DataBase;
-import theWorst.dataBase.PlayerData;
+import theWorst.dataBase.*;
 import theWorst.helpers.CoreBuilder;
 import theWorst.helpers.MapChanger;
 import theWorst.helpers.WaveSkipper;
@@ -73,36 +74,63 @@ public class Main extends Plugin {
     AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
 
+    boolean red=false;
 
     public Main() {
         Events.on(PlayerConnect.class, e ->{
-            //dataBase.register(e.player);
-            antiGriefer.addRank(e.player);
+            dataBase.register(e.player);
         });
 
-        /*Events.on(GameOverEvent.class, e ->{
+        Events.on(PlayerLeave.class,e->{
+            dataBase.onDisconnect(e.player);
+        });
+
+        Events.on(GameOverEvent.class, e ->{
             for(Player p:playerGroup){
-                if(p.getTeam()==e.winner){
-                    dataBase.updateWinCount(p);
-                }else {
-                    dataBase.updateGameCount(p);
+                if(p.getTeam()==e.winner) {
+                    dataBase.updateStats(p, Stat.gamesWon);
                 }
+                dataBase.updateStats(p, Stat.gamesPlayed);
+
             }
         });
 
-        Events.on(BlockBuildEndEvent.class, e->{
-            dataBase.updateBuildCount(e.player);
+        Events.on(BlockBuildEndEvent.class, e->
+                dataBase.updateStats(e.player,e.breaking ? Stat.buildingsBroken:Stat.buildingsBuilt));
+        Events.on(BuildSelectEvent.class, e->{
+            if(e.builder instanceof Player){
+                Player player=(Player)e.builder;
+                CoreBlock.CoreEntity core=Loadout.getCore(player);
+                BuilderTrait.BuildRequest request = player.buildRequest();
+                if(DataBase.hasSpecialPerm(player,Perm.destruct) && request.breaking){
+                    for(ItemStack s:request.block.requirements){
+                        core.items.add(s.item,s.amount/2);
+                    }
+                    Call.onDeconstructFinish(request.tile(),request.block,((Player) e.builder).id);
+                    return;
+                }
+                if(DataBase.hasSpecialPerm(player,Perm.build) && !request.breaking){
+                    if(core.items.has(request.block.requirements)){
+                        for(ItemStack s:request.block.requirements){
+                            core.items.remove(s);
+                        }
+                        Call.onConstructFinish(e.tile,request.block,((Player) e.builder).id,
+                                (byte) request.rotation,player.getTeam(),false);
+                        e.tile.configure(request.config);
+                    }
+                }
+            }
                 });
 
         Events.on(EventType.UnitDestroyEvent.class, e->{
             if(e.unit instanceof Player){
-                dataBase.updateDeathCount((Player)e.unit);
+                dataBase.updateStats((Player)e.unit,Stat.deaths);
             }else if(e.unit.getTeam()==Team.crux){
                 for(Player p:playerGroup){
-                    dataBase.updateKillCount(p);
+                    dataBase.updateStats(p,Stat.enemiesKilled);
                 }
             }
-        });*/
+        });
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
@@ -147,24 +175,27 @@ public class Main extends Plugin {
                 Player player = action.player;
                 if (player == null) return true;
 
-                //if (player.isAdmin) return true;
+                if (player.isAdmin) return true;
+                if (antiGriefer.isEmergency() && !DataBase.hasPerm(player,Rank.verified.getValue())) return false;
                 if(AntiGriefer.isGriefer(player)){
                     AntiGriefer.abuse(player);
                     return false;
                 }
                 return true;
             });
+
             netServer.admins.addChatFilter((player,message)->{
                 if((message.equals("y") || message.equals("n")) && vote.voting){
                     return null;
                 }
                 if(AntiGriefer.isGriefer(player)){
-                    if(Time.timeSinceMillis(AntiGriefer.getLastMessageTime(player))<10000L){
+                    if(Time.timeSinceMillis(DataBase.getData(player).lastMessage)<10000L){
                         AntiGriefer.abuse(player);
                         return null;
                     }
-                    AntiGriefer.updateLastMessageTime(player);
+
                 }
+                DataBase.getData(player).lastMessage=Time.millis();
                 return message;
             });
 
@@ -192,6 +223,14 @@ public class Main extends Plugin {
         configured.put("factory", factory);
     }
 
+    public static String milsToTime(long mils){
+        long sec=mils/1000;
+        long min=sec/60;
+        long hour=min/60;
+        long days=hour/24;
+        return String.format("%d-day/%02d-hour/%02d-min/%02d-sec",
+                days%365,hour%24,min%60,sec%60);
+    }
 
 
     public void updateHud(){
@@ -202,7 +241,19 @@ public class Main extends Plugin {
                 if(msg==null) continue;
                 b.append(msg).append("\n");
             }
-            Call.setHudText(b.toString().substring(0,b.length()-1));
+            if(antiGriefer.isEmergency()){
+                b.append(red ? "[scarlet]":"[gray]");
+                red=!red;
+                b.append("!!!Emergency mode.Be patient [blue]admins[] have to eliminate all [pink]griefers[]!!!\n");
+            }
+            for(Player p:playerGroup){
+                if(DataBase.getData(p).hudEnabled){
+                    Call.setHudText(p.con,b.toString().substring(0,b.length()-1));
+                }else {
+                    Call.setHudText(p.con,null);
+                }
+            }
+
         },0,1);
     }
 
@@ -229,6 +280,7 @@ public class Main extends Plugin {
         } catch (IOException ex) {
             Log.info("Error when loading data from " + path + ".");
         }
+        dataBase.load();
     }
 
 
@@ -243,6 +295,7 @@ public class Main extends Plugin {
         } catch (IOException ex) {
             Log.info("Error when saving data.");
         }
+        dataBase.save();
     }
 
     private void autoSave(int interval){
@@ -331,6 +384,7 @@ public class Main extends Plugin {
        }
        return null;
     }
+
     public static Player findPlayerByUuid(String uuid){
         return playerGroup.find(p->p.uuid.equals(uuid));
     }
@@ -377,20 +431,39 @@ public class Main extends Plugin {
     public void registerServerCommands(CommandHandler handler) {
         handler.register("w-load", "Reloads theWorst saved data.", arg -> {
             load();
-            dataBase.load();
         });
 
         handler.register("w-save", "Saves theWorst data.", arg -> {
             save();
-            dataBase.save();
+
         });
 
-        /*handler.register("set-rank","<uuid> <rank>","",arg->{
-            dataBase.setRank(findPlayerByUuid(arg[0]),arg[1]);
+        handler.register("w-database","[search]", "Shows database,list of all players that ewer been on server.Use search as in browser.",
+                arg -> {
+            Log.info(dataBase.report(arg.length==1 ? arg[0]:null));
+        });
+
+        handler.register("w-set-rank","<uuid/name> <rank>","",arg->{
+
+            try{
+                Rank.valueOf(arg[1]);
+            }catch (IllegalArgumentException e){
+                Log.info("Rank no found. Ranks:"+ Arrays.toString(Rank.values()));
+                return;
+            }
+            if(DataBase.getData(arg[0])==null){
+                Log.info("Player not found.");
+            }
+            DataBase.getData(arg[0]).rank=Rank.valueOf(arg[1]);
+            Player p=findPlayerByUuid(arg[0]);
+            if (p!=null){
+                DataBase.setRank(p,arg[1]);
+            }
+        });
+
+        handler.register("w-read","<uuid>","",arg->{
+            Log.info(DataBase.getData(findPlayerByUuid(arg[0])).toString());
                 });
-        handler.register("w-read","",arg->{
-            Log.info(dataBase.info());
-                });*/
 
         handler.register("spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
             if (playerGroup.size() == 0) {
@@ -436,6 +509,7 @@ public class Main extends Plugin {
             transportTime = Integer.parseInt(arg[0]);
             Log.info("trans-time set to "+transportTime+".");
         });
+
         handler.register("w-options","shows options for w command",arg->{
             for(String key:configured.keys()){
                 Log.info(key+":"+ configured.get(key).getConfig().keys().toArray().toString());
@@ -483,6 +557,15 @@ public class Main extends Plugin {
             vote.aVote(antiGriefer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
         });
 
+        handler.<Player>register("emergency","<playerName>","adds ,or removes if payer is marked, griefer mark of given " +
+                "player name.",(arg, player) ->{
+            if(!player.isAdmin){
+                player.sendMessage(prefix+"Only admin can start or disable emergency.");
+                return;
+            }
+            antiGriefer.switchEmergency();
+        });
+
         handler.<Player>register("maps","[page]","displays all maps",
                 (arg, player) -> {
             int page=arg.length==0 || isInvalidArg(player,"Page",arg[0]) || arg[0].equals("0") ?
@@ -508,42 +591,32 @@ public class Main extends Plugin {
             vote.aVote(loadout, p, "launch [orange]" + (p.object.equals("all") ? p.amount + " of all" : p.amount + " " + p.object) + "[] to " + where);
         });
 
-        handler.<Player>register("f", "<build/send/info> [unitName/all] [unitAmount]",
+        handler.<Player>register("f", "<build/send/info/price> [unitName/all] [unitAmount]",
                 "Build amount of unit or Send amount of units from hangar.",
                 (arg, player) -> {
             if(arg[0].equals("info")) {
                 Call.onInfoMessage(player.con, factory.info());
                 return;
             }
-            Log.info("F");
             if(!(arg.length==2 && arg[1].equals("all")) &&  notEnoughArgs(player,3,arg)) return;
-            String thirdArg = arg.length == 3 ? arg[2] : "1";
-            Log.info("G");
-            if (isInvalidArg(player, "Unit amount", thirdArg)) return;
-            Log.info("H");
-            boolean send = arg[0].equals("send");
-            Log.info("I");
-            Package p = factory.verify(player, arg[1],thirdArg, send);
-                    Log.info("J");
-            if (p == null) {
+            if(arg[0].equals("price")) {
+                int amount = arg.length == 2 || isNotInteger(arg[2]) ? 1 : Integer.parseInt(arg[2]);
+                Call.onInfoMessage(player.con, factory.price(player, arg[1], amount));
                 return;
             }
-                    Log.info("K");
+            String thirdArg = arg.length == 3 ? arg[2] : "1";
+            if (isInvalidArg(player, "Unit amount", thirdArg)) return;
+            boolean send = arg[0].equals("send");
+            Package p = factory.verify(player, arg[1],thirdArg, send);
+            if (p == null) return;
             vote.aVote(factory, p, arg[0] + " " + report(p.object, p.amount) + " units");
         });
-
-        handler.<Player>register("f-price", "<unitName> [unitAmount]",
-                "Shows price of given amount of units.", (arg, player) -> {
-                    int amount = arg.length == 1 || isNotInteger(arg[1]) ? 1 : Integer.parseInt(arg[1]);
-                    Call.onInfoMessage(player.con, factory.price(player, arg[0], amount));
-                });
 
         handler.<Player>register("build-core", "<small/normal/big>", "Makes new core.",
                 (arg, player) -> {
             Package p = builder.verify(player, arg[0], null, true);
-            if (p == null) {
-                return;
-            }
+            if (p == null) return;
+
             vote.aVote(builder, p, "building " + arg[0] + " core");
         });
 
@@ -574,5 +647,20 @@ public class Main extends Plugin {
                     player.sendMessage(prefix + "Invalid first argument");
             }
         });
+        handler.<Player>register("suicide","Kill your self.",(arg, player) -> {
+            if(!DataBase.hasPerm(player,Perm.suicide)){
+
+                player.sendMessage("You have to be "+Rank.kamikaze.getRank()+" to suicide.");
+            }
+            player.onDeath();
+            Call.sendMessage(prefix+player.name+" committed suicide.");
+            Timer.schedule(()->Call.sendMessage(prefix+"F..."),5);
+        });
+
+        handler.<Player>register("hud","<on/off/info> [page]","Enable or disable hud information."
+                ,(arg, player) -> {
+            DataBase.getData(player).hudEnabled=arg[0].equals("on");
+                });
+
     }
 }

@@ -24,6 +24,8 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import theWorst.Main;
 import theWorst.Package;
+import theWorst.dataBase.DataBase;
+import theWorst.dataBase.Perm;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
@@ -103,8 +105,9 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     }
 
     @Override
-    public void launch(theWorst.Package p) {
+    public void launch(Package p) {
         Request req;
+        DataBase.getData(p.target).factoryVotes++;
         if (p.toBase) {
             int used=0,all=0;
             ArrayList<BaseUnit> units = new ArrayList<>();
@@ -169,6 +172,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
         UnitType targetUnit = getUnitByName(object);
         int amount = Integer.parseInt(sAmount);
         boolean hasEnough = true;
+        Package p;
         if (!toBase) {
             int[] cost = stats.get(object);
             for (int i = 0; i < Main.items.size; i++) {
@@ -182,6 +186,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             if (!hasEnough) {
                 return null;
             }
+            p= new Package(object, amount, false, player);
         } else {
             int uCount = getUnitCount(object);
             if (object.equals("all")) {
@@ -203,9 +208,13 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
                     return null;
                 }
             }
-            return new theWorst.Package(object, amount, true, player, x, y);
+            p= new theWorst.Package(object, amount, true, player, x, y);
         }
-        return new Package(object, amount, false, player);
+        if(DataBase.hasSpecialPerm(player, Perm.factory)){
+            launch(p);
+            return null;
+        }
+        return p;
     }
 
     public static UnitType getUnitByName(String name) {
@@ -257,7 +266,8 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
 
     public String price(Player player, String unitName, int amount) {
         if (!stats.containsKey(unitName)) {
-            player.sendMessage(Main.prefix + "There is no [scarlet]" + unitName + "[] only " + stats.keys().toString() + ".");
+            player.sendMessage(Main.prefix + "There is no [scarlet]" + unitName + "[] only " +
+                    stats.keys().toArray().toString() + ".");
             return null;
         }
         StringBuilder message = new StringBuilder();

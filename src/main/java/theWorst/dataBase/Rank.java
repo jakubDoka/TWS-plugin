@@ -2,46 +2,91 @@ package theWorst.dataBase;
 
 import arc.graphics.Color;
 import mindustry.content.Items;
+import mindustry.entities.type.Player;
 
 public enum Rank implements java.io.Serializable{
-    griefer(Color.pink,-1),
-    newcomer(Items.copper.color),
-    member(Items.lead.color){
-        @Override
-        public boolean condition(PlayerData data) {
-            return data.playTime>50;
+    griefer(Color.pink,Perm.none),
+    newcomer(Items.copper.color){
+        {
+            displayed=false;
         }
     },
-    kamikaze(Items.blastCompound.color){
-        @Override
-        public boolean condition(PlayerData data) {
-            return data.deaths>1;
+    verified(Items.titanium.color){
+        {
+            displayed=false;
         }
     },
-    builder(Items.plastanium.color,1){
+    candidate(Items.thorium.color,Perm.high),
+    admin(Color.blue,Perm.higher){
+        {
+            displayed=false;
+        }
         @Override
-        public boolean condition(PlayerData data) {
-            return data.buildingsBuilt>10;
+        public boolean condition(Player player) {
+            return player.isAdmin;
         }
     },
-    veteran(Items.phasefabric.color,2){
-        @Override
-        public boolean condition(PlayerData data) {
-            return data.gamesPlayed>10;
+    pluginDev(Color.olive,Perm.higher){
+        {
+            description="Its me Mlokis.";
         }
     },
-    general(Items.surgealloy.color,2){
+    depositor(Items.surgealloy.color,Perm.loadout){
+        {
+            permanent=false;
+        }
         @Override
-        public boolean condition(PlayerData data) {
-            return data.gamesWon>10;
+        public boolean condition(Player player) {
+            PlayerData data=DataBase.getData(player);
+            return data.loadoutVotes>300 && data.loadoutVotes/(data.playTime/(1000*60*60))>4;
         }
     },
-    moderator(Color.royal,4),
-    owner(Color.gold,5)
-
-    ;
+    constructor(Items.phasefabric.color,Perm.factory){
+        {
+            permanent=false;
+        }
+        @Override
+        public boolean condition(Player player) {
+            PlayerData data=DataBase.getData(player);
+            return data.factoryVotes>300 && data.factoryVotes/(data.playTime/(1000*60*60))>4;
+        }
+    },
+    kamikaze(Items.blastCompound.color,Perm.suicide){
+        {
+            permanent=false;
+        }
+        @Override
+        public boolean condition(Player player) {
+            PlayerData data=DataBase.getData(player);
+            return data.deaths>5000 && data.deaths/(data.playTime/(1000*60*60))>10;
+        }
+    },
+    builder(Items.plastanium.color,Perm.build){
+        {
+            permanent=false;
+        }
+        @Override
+        public boolean condition(Player player) {
+            PlayerData data=DataBase.getData(player);
+            return data.buildingsBuilt>30000 && data.buildingsBuilt/(data.playTime/(1000*60*60))>1000;
+        }
+    },
+    bulldozer(Items.pyratite.color,Perm.destruct){
+        {
+            permanent=false;
+        }
+        @Override
+        public boolean condition(Player player) {
+            PlayerData data=DataBase.getData(player);
+            return data.buildingsBroken>4000 && data.buildingsBroken/(data.playTime/(1000*60*60))>300;
+        }
+    },
+    owner(Color.gold,Perm.highest);
     Color color;
-    int permission=0;
+    Perm permission=Perm.normal;
+    boolean displayed=true;
+    boolean permanent=true;
+    String description="missing description";
 
     public int getValue() {
         int value=0;
@@ -57,16 +102,17 @@ public enum Rank implements java.io.Serializable{
     Rank(Color color){
         this.color=color;
     }
-    Rank(Color color, int permission){
+
+    Rank(Color color, Perm permission){
         this.color=color;
         this.permission=permission;
     }
 
     public String getRank() {
-        return "[#"+color+"]<"+name()+">[]";
+        return displayed ? "[#"+color+"]<"+name()+">[]":"";
     }
 
-    public boolean condition(PlayerData data) {
+    public boolean condition(Player player) {
         return false;
     }
 }
