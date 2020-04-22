@@ -3,10 +3,8 @@ package theWorst;
 import arc.Events;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
-import arc.util.CommandHandler;
-import arc.util.Log;
-import arc.util.Time;
-import arc.util.Timer;
+import arc.util.*;
+import mindustry.Vars;
 import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
@@ -15,6 +13,8 @@ import mindustry.game.EventType;
 import mindustry.game.EventType.*;
 import mindustry.game.Team;
 import mindustry.gen.Call;
+import mindustry.net.Administration;
+import mindustry.net.Packets;
 import mindustry.plugin.Plugin;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
@@ -25,7 +25,6 @@ import java.util.Arrays;
 
 import mindustry.type.UnitType;
 import mindustry.world.blocks.storage.CoreBlock;
-import mindustry.world.modules.ItemModule;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -73,17 +72,12 @@ public class Main extends Plugin {
     DataBase dataBase=new DataBase();
     AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
-
-    boolean red=false;
+    VoteKick voteKick=new VoteKick();
 
     public Main() {
-        Events.on(PlayerConnect.class, e ->{
-            dataBase.register(e.player);
-        });
+        Events.on(PlayerConnect.class, e -> dataBase.register(e.player));
 
-        Events.on(PlayerLeave.class,e->{
-            dataBase.onDisconnect(e.player);
-        });
+        Events.on(PlayerLeave.class,e-> dataBase.onDisconnect(e.player));
 
         Events.on(GameOverEvent.class, e ->{
             for(Player p:playerGroup){
@@ -180,12 +174,8 @@ public class Main extends Plugin {
                 if (player == null) return true;
 
                 if (player.isAdmin) return true;
-                if (antiGriefer.isEmergency() && !DataBase.hasPerm(player,Rank.verified.getValue())) return false;
-                if(AntiGriefer.isGriefer(player)){
-                    AntiGriefer.abuse(player);
-                    return false;
-                }
-                return true;
+
+                return antiGriefer.canBuild(player);
             });
 
             netServer.admins.addChatFilter((player,message)->{
@@ -220,6 +210,7 @@ public class Main extends Plugin {
         interruptibles.add(loadout);
         interruptibles.add(factory);
         interruptibles.add(vote);
+        interruptibles.add(antiGriefer);
         loadSave.put("loadout", loadout);
         loadSave.put("factory", factory);
         loadSave.put("griefers", antiGriefer);
@@ -245,16 +236,11 @@ public class Main extends Plugin {
                 if(msg==null) continue;
                 b.append(msg).append("\n");
             }
-            if(antiGriefer.isEmergency()){
-                b.append(red ? "[scarlet]":"[gray]");
-                red=!red;
-                b.append("!!!Emergency mode.Be patient [blue]admins[] have to eliminate all [pink]griefers[]!!!\n");
-            }
             for(Player p:playerGroup){
                 if(DataBase.getData(p).hudEnabled){
                     Call.setHudText(p.con,b.toString().substring(0,b.length()-1));
                 }else {
-                    Call.setHudText(p.con,null);
+                    Call.setHudText(p.con,"");
                 }
             }
 
@@ -344,16 +330,20 @@ public class Main extends Plugin {
                 "Property will be set to default value.");
     }
 
-    public static boolean isInvalidArg(Player player, String what, String agr) {
-        if (isNotInteger(agr)) {
+    public void invalidArg(Player player, String arg){
+        player.sendMessage(prefix + "Invalid argument [scarlet]"+arg+"[], make sure you pick one of the options.");
+    }
+
+    public static Integer processArg(Player player, String what, String arg) {
+        if (isNotInteger(arg)) {
             if(player==null){
-                Log.info(what + " has to be integer.[scarlet]" + agr + "[] is not.");
-                return true;
+                Log.info(what + " has to be integer.[scarlet]" + arg + "[] is not.");
+            }else {
+                player.sendMessage(prefix + what + " has to be integer.[scarlet]" + arg + "[] is not.");
             }
-            player.sendMessage(prefix + what + " has to be integer.[scarlet]" + agr + "[] is not.");
-            return true;
+            return null;
         }
-        return false;
+        return Integer.parseInt(arg);
     }
 
     public static boolean notEnoughArgs(Player p,int amount,String[] args ){
@@ -379,18 +369,25 @@ public class Main extends Plugin {
         return null;
     }
 
+    public static String getPlayerList(){
+        StringBuilder builder = new StringBuilder();
+        builder.append("[orange]Players to kick: \n");
+        for(Player p : playerGroup.all()){
+            if(p.isAdmin || p.con == null || p == player || DataBase.hasPerm(p,Perm.higher.getValue())) continue;
+
+            builder.append("[lightgray] ").append(p.name).append("[accent] (#").append(p.id).append(")\n");
+        }
+        return builder.toString();
+    }
+
     public static Player findPlayer(String name) {
        for(Player p:playerGroup){
            String pName=cleanName(p.name);
-           if(pName.equals(name)){
+           if(pName.equalsIgnoreCase(name)){
                return p;
            }
        }
        return null;
-    }
-
-    public static Player findPlayerByUuid(String uuid){
-        return playerGroup.find(p->p.uuid.equals(uuid));
     }
 
     public static String cleanName(String name){
@@ -433,12 +430,15 @@ public class Main extends Plugin {
 
     @Override
     public void registerServerCommands(CommandHandler handler) {
+        handler.removeCommand("say");
+
         handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
 
         handler.register("w-save", "Saves theWorst data.", arg -> save());
 
-        handler.register("w-database","[search]", "Shows database,list of all players that ewer been on server.Use search as in browser.",
-                arg -> Log.info(dataBase.report(arg.length==1 ? arg[0]:null)));
+        handler.register("w-database","[search]", "Shows database,list of all players that " +
+                "ewer been on server.Use search as in browser.", arg ->
+                Log.info(dataBase.report(arg.length==1 ? arg[0]:null)));
 
         handler.register("w-set-rank","<uuid/name/index> <rank>","",arg->{
             try{
@@ -453,13 +453,13 @@ public class Main extends Plugin {
                 return;
             }
             pd.rank=Rank.valueOf(arg[1]);
+            Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
         });
 
         handler.register("w-info","<uuid/name/index>","Displays info about player.",arg->{
             PlayerData pd=DataBase.findData(arg[0]);
-            Player p=findPlayerByUuid(arg[0]);
             if(pd==null ) {
-                Log.info("Player not found.Search by name applies only on online players.");
+                Log.info("Player not found. Search by name applies only on online players.");
                 return;
             }
             Log.info(pd.toString());
@@ -467,7 +467,7 @@ public class Main extends Plugin {
 
         handler.register("spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
             if (playerGroup.size() == 0) {
-                Log.info("there is no one logged,why bother spawning units?");
+                Log.info("There is no one logged, why bother spawning units?");
             }
             UnitType unitType = Factory.getUnitByName(arg[0]);
             if (unitType == null) {
@@ -517,14 +517,15 @@ public class Main extends Plugin {
         });
 
         handler.register("w-autoSave","[frequency]","Initializes autosave or stops it.",arg->{
-            int frequency=defaultAutoSaveFrequency;
-            if(!isInvalidArg(null,"Frequency",arg[0])) frequency=Integer.parseInt(arg[0]);
-            if(frequency==0){
+            Integer frequency=processArg(null,"Frequency",arg[0]);
+            if(frequency==null) return;
+            if( frequency==0){
                 Log.info("If you want kill-server command so badly, you can open an issue on github.");
                 return;
             }
             autoSave(frequency);
         });
+
         handler.register("w", "<target> <property> <value>", "Sets property of target to value/integer.", arg -> {
             if (!configured.containsKey(arg[0])) {
                 Log.info("Invalid target.Valid targets:" + configured.keys().toString());
@@ -535,104 +536,138 @@ public class Main extends Plugin {
                 Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + config.keys().toArray().toString());
                 return;
             }
-            if (isNotInteger(arg[2])) {
-                Log.info(arg[2] + " is not an integer.");
-                return;
-            }
-            config.put(arg[1], Integer.parseInt(arg[2]));
+            Integer value=processArg(null,"Value",arg[2]);
+            if(value==null) return;
+            config.put(arg[1], value);
             Log.info("Property changed.");
         });
+
+        handler.register("say","<text...>","Send message to all players.",
+                arg-> Call.sendMessage(prefix+arg[0]));
 
     }
 
     @Override
     public void registerClientCommands(CommandHandler handler) {
         handler.removeCommand("vote");
-        handler.removeCommand("maps");
+        handler.removeCommand("votekick");
 
-        handler.<Player>register("mkgf","<playerName>","adds ,or removes if payer is marked, griefer mark of given " +
+        handler.<Player>register("mkgf","[playerName]","Adds, or removes if payer is marked, griefer mark of given " +
                         "player name.",(arg, player) ->{
-            Package p=antiGriefer.verify(player,arg[0],null,false);
+            if(arg.length == 0) {
+                player.sendMessage(getPlayerList());
+                return;
+            }
+            Package p=antiGriefer.verify(player,arg[0],0,false);
             if(p==null) return;
             vote.aVote(antiGriefer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
         });
 
-        handler.<Player>register("emergency","<playerName>","adds ,or removes if payer is marked, griefer mark of given " +
+        handler.<Player>register("emergency","[off]","adds ,or removes if payer is marked, griefer mark of given " +
                 "player name.",(arg, player) ->{
             if(!player.isAdmin){
                 player.sendMessage(prefix+"Only admin can start or disable emergency.");
                 return;
             }
-            antiGriefer.switchEmergency();
+            antiGriefer.switchEmergency(arg.length==1);
         });
 
         handler.<Player>register("maps","[page]","displays all maps",
                 (arg, player) -> {
-            int page=arg.length==0 || isInvalidArg(player,"Page",arg[0]) || arg[0].equals("0") ?
-                    1:Integer.parseInt(arg[0]);
+            Integer page=processArg(player,"Page",arg[0]);
+            if(page==null)return;
             Call.onInfoMessage(player.con, changer.info(page));
         });
 
         handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
                 "Fill loadout with resources from core/send resources from loadout to core", (arg, player) -> {
-            if(arg[0].equals("info")) {
-                Call.onInfoMessage(player.con, loadout.info());
-                return;
+            boolean use;
+            switch (arg[0]){
+                case "info":
+                    Call.onInfoMessage(player.con, loadout.info());
+                    return;
+                case "use":
+                    use=true;
+                    break;
+                case "fill":
+                    use=false;
+                    break;
+                default:
+                    invalidArg(player, arg[0]);
+                    return;
             }
-            if(notEnoughArgs(player,3,arg))return;
-            if (isInvalidArg(player, "Item amount", arg[2])) return;
+            if(notEnoughArgs(player,3,arg)) return;
 
-            boolean use = arg[0].equals("use");
-            Package p = loadout.verify(player, arg[1], arg[2], use);
-            if (p == null) {
-                return;
-            }
-            String where = use ? "core" : "loadout";
-            vote.aVote(loadout, p, "launch [orange]" + (p.object.equals("all") ? p.amount + " of all" : p.amount + " " + p.object) + "[] to " + where);
+            Integer amount=processArg(player,"Item amount",arg[2]);
+            if(amount==null)return;
+
+            Package p = loadout.verify(player, arg[1], amount, use);
+            if (p == null) return;
+
+            vote.aVote(loadout, p, "launch [orange]" +
+                    (p.object.equals("all") ? p.amount + " of all" : p.amount + " " + p.object) + "[] to "
+                    + (use ? "core" : "loadout"));
         });
 
         handler.<Player>register("f", "<build/send/info/price> [unitName/all] [unitAmount]",
                 "Build amount of unit or Send amount of units from hangar.",
                 (arg, player) -> {
-            if(arg[0].equals("info")) {
-                Call.onInfoMessage(player.con, factory.info());
-                return;
+            if(notEnoughArgs(player,1,arg)) return;
+            boolean send;
+            switch (arg[0]){
+                case "info":
+                    Call.onInfoMessage(player.con, factory.info());
+                    return;
+                case "price":
+                    if(notEnoughArgs(player,2,arg)) return;
+                    int amount = arg.length == 2 || isNotInteger(arg[2]) ? 1 : Integer.parseInt(arg[2]);
+                    Call.onInfoMessage(player.con, factory.price(player, arg[1], amount));
+                    return;
+                case "send":
+                    send=true;
+                    break;
+                case "build":
+                    send=false;
+                    break;
+                default:
+                    invalidArg(player,arg[0]);
+                    return;
             }
-            if(!(arg.length==2 && arg[1].equals("all")) &&  notEnoughArgs(player,3,arg)) return;
-            if(arg[0].equals("price")) {
-                int amount = arg.length == 2 || isNotInteger(arg[2]) ? 1 : Integer.parseInt(arg[2]);
-                Call.onInfoMessage(player.con, factory.price(player, arg[1], amount));
-                return;
-            }
-            String thirdArg = arg.length == 3 ? arg[2] : "1";
-            if (isInvalidArg(player, "Unit amount", thirdArg)) return;
-            boolean send = arg[0].equals("send");
-            Package p = factory.verify(player, arg[1],thirdArg, send);
+            if( notEnoughArgs(player,3,arg)) return;
+
+            Integer amount=processArg(player,"Unit amount",arg[2]);
+            if(amount==null)return;
+
+            Package p = factory.verify(player, arg[1],amount, send);
             if (p == null) return;
+
             vote.aVote(factory, p, arg[0] + " " + report(p.object, p.amount) + " units");
         });
 
         handler.<Player>register("build-core", "<small/normal/big>", "Makes new core.",
                 (arg, player) -> {
-            Package p = builder.verify(player, arg[0], null, true);
+            Package p = builder.verify(player, arg[0], 0, true);
             if (p == null) return;
 
             vote.aVote(builder, p, "building " + arg[0] + " core");
         });
 
-        handler.<Player>register("vote", "<map/skipwave/restart/gameover> [indexOrName/waveAmount]", "Opens vote session.",
+        handler.<Player>register("vote", "<map/skipwave/restart/gameover/y/n> [indexOrName/waveAmount]", "Opens vote session or votes in case of votekick.",
                 (arg, player) -> {
             Package p;
             String secArg = arg.length == 2 ? arg[1] : "0";
             switch (arg[0]) {
                 case "map":
-                    p = changer.verify(player, secArg, null, false);
+                    p = changer.verify(player, secArg, 0, false);
                     if (p == null) return;
+
                     vote.aVote(changer, p, "changing map to" + ((mindustry.maps.Map)p.obj).name() + ". ");
                     return;
                 case "skipwave":
-                    if (isInvalidArg(player, "Wave amount", secArg)) return;
-                    p = skipper.verify(player, null, secArg, false);
+                    Integer amount=processArg(player,"Wave amount",secArg);
+                    if(amount==null)return;
+
+                    p = skipper.verify(player, null, amount, false);
                     vote.aVote(skipper, p, "skipping " + p.amount + " waves");
                     return;
                 case "restart":
@@ -643,23 +678,57 @@ public class Main extends Plugin {
                     vote.aVote(changer, new Package(null ,null, player),
                             "gameover.");
                     return;
+                case "y":
+                    voteKick.vote(player,1);
+                    return;
+                case "n":
+                    voteKick.vote(player,-1);
+                    return;
                 default:
-                    player.sendMessage(prefix + "Invalid first argument");
+                    invalidArg(player, arg[0]);
             }
         });
         handler.<Player>register("suicide","Kill your self.",(arg, player) -> {
-            if(!DataBase.hasPerm(player,Perm.suicide)){
+            if(!DataBase.hasSpecialPerm(player,Perm.suicide)){
                 player.sendMessage("You have to be "+Rank.kamikaze.getRank()+" to suicide.");
                 return;
             }
             player.onDeath();
+            player.kill();
             Call.sendMessage(prefix+player.name+" committed suicide.");
             Timer.schedule(()->Call.sendMessage(prefix+"F..."),5);
         });
 
         handler.<Player>register("hud","<on/off> [page]","Enable or disable hud information."
                 ,(arg, player) -> DataBase.getData(player).hudEnabled=arg[0].equals("on"));
+
         handler.<Player>register("info","Displays info about you.",
                 (arg,player)-> Call.onInfoMessage(player.con,DataBase.getData(player).toString()));
+
+        handler.<Player>register("votekick", "[player...]", "Vote to kick a player, with a cooldown.", (args, player) -> {
+
+            if(!Administration.Config.enableVotekick.bool()) {
+                player.sendMessage("[scarlet]Vote-kick is disabled on this server.");
+                return;
+            }
+            if(vote.voting){
+                player.sendMessage(prefix+"Votekick in process.");
+            }
+            if(playerGroup.size() < 3) {
+                player.sendMessage(prefix+"At least 3 players are needed to start a votekick.");
+                return;
+            }
+            if(player.isLocal){
+                player.sendMessage(prefix+"Just kick them yourself if you're the host.");
+                return;
+            }
+            if(args.length == 0) {
+                player.sendMessage(getPlayerList());
+                return;
+            }
+
+            voteKick.aVoteKick(args[0],player);
+
+        });
     }
 }

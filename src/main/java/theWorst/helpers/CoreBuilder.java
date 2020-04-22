@@ -32,7 +32,7 @@ public class CoreBuilder implements Votable {
     }
 
     @Override
-    public Package verify(Player player, String object, String sAmount, boolean toBase) {
+    public Package verify(Player player, String object, int amount, boolean toBase) {
         if (!object.equals("big") && !object.equals("normal") && !object.equals("small")) {
             player.sendMessage(Main.prefix + "Invalid argument.");
             return null;

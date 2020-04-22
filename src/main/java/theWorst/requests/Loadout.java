@@ -120,7 +120,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
     }
 
     @Override
-    public Package verify(Player player, String object, String sAmount, boolean toBase) {
+    public Package verify(Player player, String object, int amount, boolean toBase) {
         if (requests.size == config.get(THREAD_COUNT) && toBase) {
             player.sendMessage(Main.prefix + " All the ships are occupied at the moment.");
             return null;
@@ -130,7 +130,6 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             player.sendMessage(Main.prefix + "The [scarlet] " + object + "[] doesn't exist.");
             return null;
         }
-        int amount = Integer.parseInt(sAmount);
         CoreBlock.CoreEntity core = getCore(player);
         if (getTransportAmount(targetItem, amount, core, toBase) == 0) {
             player.sendMessage(Main.prefix + "Nothing to transport.");
@@ -139,6 +138,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         Package p=new Package(object, amount, toBase, player);
         if(DataBase.hasSpecialPerm(player, Perm.loadout)){
             launch(p);
+            Call.sendMessage(Main.prefix+player.name+" just used loadout.");
             return null;
         }
         return p;

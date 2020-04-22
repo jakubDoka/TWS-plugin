@@ -109,7 +109,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
         Request req;
         DataBase.getData(p.target).factoryVotes++;
         if (p.toBase) {
-            int used=0,all=0;
+            int used=0,all;
             ArrayList<BaseUnit> units = new ArrayList<>();
             if (p.object.equals("all")) {
                 for (String name : stats.keys()) {
@@ -160,7 +160,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     }
 
     @Override
-    public theWorst.Package verify(Player player, String object, String sAmount, boolean toBase) {
+    public theWorst.Package verify(Player player, String object, int amount, boolean toBase) {
         if (!canTransport()) {
             player.sendMessage(Main.prefix + "Factory is doing maximum amount of tasks actually.");
             return null;
@@ -170,7 +170,6 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             return null;
         }
         UnitType targetUnit = getUnitByName(object);
-        int amount = Integer.parseInt(sAmount);
         boolean hasEnough = true;
         Package p;
         if (!toBase) {
@@ -203,15 +202,14 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             int x = (int) player.x;
             int y = (int) player.y;
             if (world.tile(x / 8, y / 8).solid()) {
-                if (object.equals("all") || !targetUnit.flying) {
-                    player.sendMessage(Main.prefix + "Land unit cant be dropped on a solid block.");
-                    return null;
-                }
+                player.sendMessage(Main.prefix + "Land unit cant be dropped on a solid block.");
+                return null;
             }
             p= new theWorst.Package(object, amount, true, player, x, y);
         }
         if(DataBase.hasSpecialPerm(player, Perm.factory)){
             launch(p);
+            Call.sendMessage(Main.prefix+player.name+" just used factory.");
             return null;
         }
         return p;

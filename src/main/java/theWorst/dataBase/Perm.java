@@ -8,7 +8,7 @@ public enum Perm {
     build(1),
     destruct(1),
     suicide(1),
-    high(3),
+    high(1),
     higher(4),
     highest(100)
     ;

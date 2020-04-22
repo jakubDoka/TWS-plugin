@@ -48,7 +48,7 @@ public class MapChanger implements Votable {
     }
 
     @Override
-    public Package verify(Player player, String object, String sAmount, boolean toBase) {
+    public Package verify(Player player, String object, int amount, boolean toBase) {
         Array<Map> mapList = maps.all();
         mindustry.maps.Map map = null;
         if (Main.isNotInteger(object)) {

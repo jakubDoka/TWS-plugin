@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import static mindustry.Vars.player;
 import static mindustry.Vars.playerGroup;
 
 public class Vote implements Interruptible {
@@ -59,6 +60,7 @@ public class Vote implements Interruptible {
         this.aPackage = aPackage;
         this.message = message;
         restart();
+        addVote(requester,"y");
         Call.sendMessage(Main.prefix +"[orange]"+  requester.name +
                 "[] started vote for " + message + ". Send a message with \"y\" to agree or \"n\" to disagree.");
     }
@@ -100,7 +102,7 @@ public class Vote implements Interruptible {
 
     }
 
-    public int getRequired() {
+    public static int getRequired() {
         int count = 0;
         for(Player p:playerGroup){
             if(AntiGriefer.isGriefer(p)) continue;

@@ -11,7 +11,7 @@ public enum Rank implements java.io.Serializable{
             displayed=false;
         }
     },
-    verified(Items.titanium.color){
+    verified(Items.titanium.color,Perm.high){
         {
             displayed=false;
         }

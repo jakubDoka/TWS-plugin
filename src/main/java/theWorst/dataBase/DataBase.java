@@ -93,10 +93,10 @@ public class DataBase {
                 return;
             }
         }
-        /*if(!rank.permanent){
+        if(!rank.permanent){
             Call.sendMessage("[orange]"+player.name+"[] lost his rank.");
             setRank(player,getTrueRank(player ));
-        }*/
+        }
     }
 
     public static boolean hasPerm(Player player,int required){
