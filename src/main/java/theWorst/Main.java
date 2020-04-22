@@ -593,7 +593,7 @@ public class Main extends Plugin {
         });
 
         handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
-                "Fill loadout with resources from core/send resources from loadout to core", (arg, player) -> {
+                "Fill loadout with resources from core/send resources from loadout to core.", (arg, player) -> {git
             boolean use;
             switch (arg[0]){
                 case "info":
@@ -625,7 +625,6 @@ public class Main extends Plugin {
         handler.<Player>register("f", "<build/send/info/price> [unitName/all] [unitAmount]",
                 "Build amount of unit or Send amount of units from hangar.",
                 (arg, player) -> {
-            if(notEnoughArgs(player,1,arg)) return;
             boolean send;
             switch (arg[0]){
                 case "info":
