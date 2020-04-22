@@ -7,6 +7,8 @@ import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import mindustry.net.Packets;
+import theWorst.dataBase.DataBase;
+import theWorst.dataBase.Perm;
 
 import static mindustry.Vars.playerGroup;
 
@@ -33,22 +35,9 @@ public class VoteKick{
                 return;
             }
         }
-        if(found.isAdmin){
-            player.sendMessage(Main.prefix+"Did you really expect to be able to kick an admin?");
-            return;
-        }
-        if(found.isLocal){
-            player.sendMessage(Main.prefix+"Local players cannot be kicked.");
-            return;
-        }
-        if(found.getTeam() != player.getTeam()){
-            player.sendMessage(Main.prefix+"Only players on your team can be kicked.");
-            return;
-        }
-        if(found==player){
-            player.sendMessage(Main.prefix+"You cannot kick your self.");
-            return;
-        }
+
+        if(AntiGriefer.verifyTarget(found,player,"kick")) return;
+
         votes=0;
         this.target = found;
         vote(player, 1);

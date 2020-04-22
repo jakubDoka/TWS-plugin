@@ -62,6 +62,30 @@ public class AntiGriefer implements Votable, LoadSave , Interruptible {
 
     }
 
+    public static boolean verifyTarget(Player target,Player player,String matter){
+        if(DataBase.hasPerm(target, Perm.higher.getValue())){
+            player.sendMessage(Main.prefix+"You cannot kick "+DataBase.getTrueRank(player).getRank()+".");
+            return false;
+        }
+        if(target.isAdmin){
+            player.sendMessage(Main.prefix+"Did you really expect to be able to "+matter+" an admin?");
+            return false;
+        }
+        if(target.isLocal){
+            player.sendMessage(Main.prefix+"Local players cannot be "+matter+"ed.");
+            return false;
+        }
+        if(target==player){
+            player.sendMessage(Main.prefix+"You cannot "+matter+" your self.");
+            return false;
+        }
+        if(isGriefer(player)){
+            abuse(player);
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public Package verify(Player player, String object, int amount, boolean toBase) {
         Player target;
@@ -78,25 +102,12 @@ public class AntiGriefer implements Votable, LoadSave , Interruptible {
                 return null;
             }
         }
-        if(target == player){
-            player.sendMessage(Main.prefix+"You cannot mark your self.");
-            return null;
-        }
-        if(DataBase.hasPerm(player,Perm.higher.getValue())){
-            player.sendMessage(Main.prefix+"You cannot mark "+DataBase.getTrueRank(player).getRank()+".");
-            return null;
-        }
-        if(target.isAdmin){
-            player.sendMessage(Main.prefix+"You cannot mark admin.");
-            return null;
-        }
+
+        if(!verifyTarget(target,player,"mark")) return null;
+
         Package p=new Package(isGriefer(target) ? "remove":"add",target,player);
         if(player.isAdmin){
             launch(p);
-            return null;
-        }
-        if(isGriefer(player)){
-            abuse(player);
             return null;
         }
         return p;

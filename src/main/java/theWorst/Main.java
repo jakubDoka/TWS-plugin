@@ -452,8 +452,17 @@ public class Main extends Plugin {
                 Log.info("Player not found.");
                 return;
             }
+
             pd.rank=Rank.valueOf(arg[1]);
             Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
+            Player p=findPlayer(arg[0]);
+            if(p==null){
+                p=playerGroup.find(player->player.uuid.equalsIgnoreCase(arg[0]));
+                if(p==null){
+                    return;
+                }
+            }
+            DataBase.updateName(p);
         });
 
         handler.register("w-info","<uuid/name/index>","Displays info about player.",arg->{
@@ -554,6 +563,10 @@ public class Main extends Plugin {
 
         handler.<Player>register("mkgf","[playerName]","Adds, or removes if payer is marked, griefer mark of given " +
                         "player name.",(arg, player) ->{
+            if(playerGroup.size() < 3) {
+                player.sendMessage(prefix+"At least 3 players are needed to mark a griefer.");
+                return;
+            }
             if(arg.length == 0) {
                 player.sendMessage(getPlayerList());
                 return;

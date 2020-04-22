@@ -66,7 +66,7 @@ public class DataBase {
         getData(player).disconnect();
     }
 
-    private static void updateName(Player player) {
+    public static void updateName(Player player) {
         PlayerData data=getData(player);
         player.name=data.originalName+data.rank.getRank();
     }
