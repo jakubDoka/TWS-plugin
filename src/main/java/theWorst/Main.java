@@ -4,7 +4,6 @@ import arc.Events;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
 import arc.util.*;
-import mindustry.Vars;
 import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
@@ -14,7 +13,6 @@ import mindustry.game.EventType.*;
 import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.net.Administration;
-import mindustry.net.Packets;
 import mindustry.plugin.Plugin;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
@@ -213,7 +211,6 @@ public class Main extends Plugin {
         interruptibles.add(antiGriefer);
         loadSave.put("loadout", loadout);
         loadSave.put("factory", factory);
-        loadSave.put("griefers", antiGriefer);
         configured.put("loadout", loadout);
         configured.put("factory", factory);
     }
@@ -334,7 +331,7 @@ public class Main extends Plugin {
         player.sendMessage(prefix + "Invalid argument [scarlet]"+arg+"[], make sure you pick one of the options.");
     }
 
-    public static Integer processArg(Player player, String what, String arg) {
+    public Integer processArg(Player player, String what, String arg) {
         if (isNotInteger(arg)) {
             if(player==null){
                 Log.info(what + " has to be integer.[scarlet]" + arg + "[] is not.");
@@ -346,7 +343,7 @@ public class Main extends Plugin {
         return Integer.parseInt(arg);
     }
 
-    public static boolean notEnoughArgs(Player p,int amount,String[] args ){
+    public boolean notEnoughArgs(Player p,int amount,String[] args ){
         if(args.length!=amount){
             String m="Not enough arguments.";
             if(p!=null){
@@ -403,7 +400,7 @@ public class Main extends Plugin {
         return name;
     }
 
-    public static Team getTeamByName(String name) {
+    public Team getTeamByName(String name) {
         for (Team t : Team.all()) {
             if (t.name.equals(name)) {
                 return t;
@@ -419,15 +416,6 @@ public class Main extends Plugin {
             }
         }
     }
-
-    public static int getStorageSize(Player player) {
-        int size = 0;
-        for (CoreBlock.CoreEntity c : player.getTeam().cores()) {
-            size += c.block.itemCapacity;
-        }
-        return size;
-    }
-
     @Override
     public void registerServerCommands(CommandHandler handler) {
         handler.removeCommand("say");
@@ -438,7 +426,7 @@ public class Main extends Plugin {
 
         handler.register("w-database","[search]", "Shows database,list of all players that " +
                 "ewer been on server.Use search as in browser.", arg ->
-                Log.info(dataBase.report(arg.length==1 ? arg[0]:null)));
+                Log.info(dataBase.report(arg.length==1 ? arg[0]:null,true,-1)));
 
         handler.register("w-set-rank","<uuid/name/index> <rank>","",arg->{
             try{
@@ -521,7 +509,7 @@ public class Main extends Plugin {
 
         handler.register("w-options","shows options for w command",arg->{
             for(String key:configured.keys()){
-                Log.info(key+":"+ configured.get(key).getConfig().keys().toArray().toString());
+                Log.info(key+":"+ toString(configured.get(key).getConfig().keys().toArray()));
             }
         });
 
@@ -537,13 +525,15 @@ public class Main extends Plugin {
 
         handler.register("w", "<target> <property> <value>", "Sets property of target to value/integer.", arg -> {
             if (!configured.containsKey(arg[0])) {
-                Log.info("Invalid target.Valid targets:" + configured.keys().toString());
+                Log.info("Invalid target.Valid targets:" + toString(configured.keys().toArray()));
                 return;
             }
+
             ArrayMap<String, Integer> config = configured.get(arg[0]).getConfig();
             if (!config.containsKey(arg[1])) {
-                Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + config.keys().toArray().toString());
+                Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + toString(config.keys().toArray()));
                 return;
+
             }
             Integer value=processArg(null,"Value",arg[2]);
             if(value==null) return;
@@ -554,6 +544,13 @@ public class Main extends Plugin {
         handler.register("say","<text...>","Send message to all players.",
                 arg-> Call.sendMessage(prefix+arg[0]));
 
+    }
+    public static String toString(Array<String> struct){
+        StringBuilder b=new StringBuilder();
+        for(String s :struct){
+            b.append(s).append(" ");
+        }
+        return b.toString();
     }
 
     @Override
@@ -576,8 +573,7 @@ public class Main extends Plugin {
             vote.aVote(antiGriefer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
         });
 
-        handler.<Player>register("emergency","[off]","adds ,or removes if payer is marked, griefer mark of given " +
-                "player name.",(arg, player) ->{
+        handler.<Player>register("emergency","[off]","Starts emergency.For admins only.",(arg, player) ->{
             if(!player.isAdmin){
                 player.sendMessage(prefix+"Only admin can start or disable emergency.");
                 return;
@@ -593,7 +589,7 @@ public class Main extends Plugin {
         });
 
         handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
-                "Fill loadout with resources from core/send resources from loadout to core.", (arg, player) -> {git
+                "Fill loadout with resources from core/send resources from loadout to core.", (arg, player) -> {
             boolean use;
             switch (arg[0]){
                 case "info":
@@ -673,7 +669,7 @@ public class Main extends Plugin {
                     p = changer.verify(player, secArg, 0, false);
                     if (p == null) return;
 
-                    vote.aVote(changer, p, "changing map to" + ((mindustry.maps.Map)p.obj).name() + ". ");
+                    vote.aVote(changer, p, "changing map to " + ((mindustry.maps.Map)p.obj).name() + ". ");
                     return;
                 case "skipwave":
                     Integer amount=processArg(player,"Wave amount",secArg);
@@ -700,6 +696,7 @@ public class Main extends Plugin {
                     invalidArg(player, arg[0]);
             }
         });
+
         handler.<Player>register("suicide","Kill your self.",(arg, player) -> {
             if(!DataBase.hasSpecialPerm(player,Perm.suicide)){
                 player.sendMessage("You have to be "+Rank.kamikaze.getRank()+" to suicide.");
@@ -711,19 +708,39 @@ public class Main extends Plugin {
             Timer.schedule(()->Call.sendMessage(prefix+"F..."),5);
         });
 
-        handler.<Player>register("hud","<on/off> [page]","Enable or disable hud information."
+        handler.<Player>register("hud","<on/off>","Enable or disable hud information."
                 ,(arg, player) -> DataBase.getData(player).hudEnabled=arg[0].equals("on"));
 
-        handler.<Player>register("info","Displays info about you.",
-                (arg,player)-> Call.onInfoMessage(player.con,DataBase.getData(player).toString()));
+        handler.<Player>register("info","[name/ID/list] [page]","Displays info about you or another player.",
+                (arg,player)-> {
+            if(arg.length>=1){
+                if(arg[0].equals("list")){
+                    Integer page=1;
+                    if(arg.length==2){
+                        page=processArg(player,"Page",arg[1]);
+                        if(page==null)return;
+                    }
+                    Call.onInfoMessage(player.con,dataBase.report(null,false,page));
+                    return;
+                }
+                PlayerData pd=DataBase.findData(arg[0]);
+                if(pd==null){
+                    player.sendMessage(prefix+"Player not found.");
+                    return;
+                }
+                Call.onInfoMessage(player.con,pd.toString());
+                return;
+            }
+            Call.onInfoMessage(player.con,DataBase.getData(player).toString());
+                });
 
-        handler.<Player>register("votekick", "[player...]", "Vote to kick a player, with a cooldown.", (args, player) -> {
+        handler.<Player>register("votekick", "[player]", "Vote to kick a player.", (args, player) -> {
 
             if(!Administration.Config.enableVotekick.bool()) {
                 player.sendMessage("[scarlet]Vote-kick is disabled on this server.");
                 return;
             }
-            if(vote.voting){
+            if(voteKick.voting){
                 player.sendMessage(prefix+"Votekick in process.");
             }
             if(playerGroup.size() < 3) {

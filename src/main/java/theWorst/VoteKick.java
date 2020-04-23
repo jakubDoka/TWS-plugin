@@ -7,13 +7,11 @@ import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import mindustry.net.Packets;
-import theWorst.dataBase.DataBase;
-import theWorst.dataBase.Perm;
 
 import static mindustry.Vars.playerGroup;
 
 public class VoteKick{
-    int kickDuration=60*60;
+    final int kickDuration=60*60;
     Player target;
     Array<String> voted = new Array<>();
     Timer.Task task;
@@ -42,10 +40,9 @@ public class VoteKick{
         this.target = found;
         vote(player, 1);
         this.task = Timer.schedule(() -> {
-            if(!checkPass()){
-                Call.sendMessage(Strings.format("[lightgray]Vote failed. Not enough votes to kick[orange] {0}[lightgray].", target.name));
-                task.cancel();
-                voting=false;
+            if(checkPass()){
+                Call.sendMessage(Strings.format(Main.prefix+"Vote failed. Not enough votes to kick[green] {0}[].", target.name));
+                restart();
             }
         }, 60);
     }
@@ -58,10 +55,13 @@ public class VoteKick{
         if(player==target){
             player.sendMessage(Main.prefix+"You cannot vote on your own trial.");
         }
+        if(!voting){
+            player.sendMessage(Main.prefix+"NO votekick to vote for, you may try to write just \"y\" or \"n\" to chat.");
+        }
         votes += d;
         voted.add(player.uuid);
-        if(!checkPass()){
-            Call.sendMessage(Strings.format("[orange]{0}[lightgray] has voted on kicking[orange] {1}[].[accent] ({2}/{3})\n[lightgray]Type[orange] /vote <y/n>[] to agree.",
+        if(checkPass()){
+            Call.sendMessage(Strings.format(Main.prefix+"[orange]{0}[] has voted on kicking[scarlet] {1}[]. ({2}/{3})\nType [orange]/vote <y/n>[] to agree.",
                     player.name, target.name, votes, Vote.getRequired()));
         }
 
@@ -69,12 +69,17 @@ public class VoteKick{
 
     boolean checkPass(){
         if(votes >= Vote.getRequired()){
-            Call.sendMessage(Strings.format("[orange]Vote passed.[scarlet] {0}[orange] will be banned from the server for {1} minutes.", target.name, (kickDuration/60)));
+            Call.sendMessage(Strings.format(Main.prefix+"Vote passed.[scarlet] {0}[] will be banned from the server for {1} minutes.", target.name, (kickDuration/60)));
             target.getInfo().lastKicked = Time.millis() + kickDuration*1000;
             playerGroup.all().each(p -> p.uuid != null && p.uuid.equals(target.uuid), p -> p.con.kick(Packets.KickReason.vote));
-            task.cancel();
-            return true;
+            restart();
+            return false;
         }
-        return false;
+        return true;
+    }
+    private void restart(){
+        task.cancel();
+        voting=false;
+        voted.clear();
     }
 }

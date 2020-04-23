@@ -1,6 +1,7 @@
 package theWorst.helpers;
 
 import arc.Events;
+import arc.math.Mathf;
 import arc.struct.Array;
 import mindustry.Vars;
 import mindustry.entities.type.Player;
@@ -71,14 +72,12 @@ public class MapChanger implements Votable {
     public String info(int page) {
         Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
         int pageCount=(int)Math.ceil(maps.size/(float)pageSize);
-
+        page= Mathf.clamp(page,1,pageCount);
 
         StringBuilder b=new StringBuilder();
-        b.append("[orange]--MAPS--[]\n\n");
-        if(page>pageCount){
-            b.append("There are only ").append(pageCount).append(" pages.\n\n");
-            page=pageCount;
-        }
+        b.append("[orange]--MAPS(").append(page).append("/").append(pageCount).append(")--[]\n\n");
+
+
 
         for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
             b.append("[yellow]").append(i).append(".[]").append(maps.get(i).name()).append("\n");

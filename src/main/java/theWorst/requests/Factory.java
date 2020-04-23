@@ -265,7 +265,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     public String price(Player player, String unitName, int amount) {
         if (!stats.containsKey(unitName)) {
             player.sendMessage(Main.prefix + "There is no [scarlet]" + unitName + "[] only " +
-                    stats.keys().toArray().toString() + ".");
+                    Main.toString(stats.keys().toArray()) + ".");
             return null;
         }
         StringBuilder message = new StringBuilder();

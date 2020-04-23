@@ -1,5 +1,6 @@
 package theWorst.dataBase;
 
+import arc.math.Mathf;
 import arc.util.Log;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
@@ -45,7 +46,6 @@ public class DataBase {
     public static Rank getTrueRank(Player player){
         return getData(player).trueRank;
     }
-
 
     public static void restartRank(Player player) {
         setRank(player,Rank.newcomer);
@@ -103,9 +103,21 @@ public class DataBase {
         return getTrueRank(player).permission.getValue()>=required;
     }
 
+    public static int getIndex(PlayerData searched){
+        int idx=0;
+        for(PlayerData pd:data.values()){
+            if(pd==searched){
+                return idx;
+            }
+            idx++;
+        }
+        return -1;
+    }
+
     public static boolean hasPerm(Player player,Perm perm){
         return getTrueRank(player).permission==perm;
     }
+
     public static boolean hasSpecialPerm(Player player,Perm perm){
         return getRank(player).permission==perm;
     }
@@ -133,10 +145,6 @@ public class DataBase {
         }
         updateRank(player);
     }
-
-
-
-
 
     public void save() {
         try {
@@ -168,15 +176,35 @@ public class DataBase {
         }
     }
 
-    public String report(String search){
+    public String report(String search ,boolean all,int page){
+        int pageSize=15;
+        int maxPages=(int)Math.ceil(data.size() / (float) pageSize);
+
         StringBuilder b=new StringBuilder();
-        b.append("\n");
+
+
+        int begin=0;
+        int end=data.size();
+
+        if(page!=-1){
+            page= Mathf.clamp(page,1,maxPages);
+            begin=(page-1)*pageSize;
+            end=pageSize+begin;
+        }
+        b.append(all ? "\n":"[orange]--PLAYER INFO("+Mathf.clamp(page,1,maxPages)+"/"+maxPages+")--[]\n\n");
+
         int i=0;
         for(String u:data.keySet()){
+
+            if(i<begin || i>=end) {
+                i++;
+                continue;
+            }
             PlayerData pd=getData(u);
             if(search!=null && !pd.originalName.startsWith(search)) continue;
-            b.append(i).append(".").append(pd.originalName).append(" | ").append(pd.rank.name());
-            b.append(" | ").append(u).append("\n");
+            b.append(i).append(" | ").append(pd.originalName).append(" | ").append(pd.rank.name());
+            if(all) b.append(" | ").append(u);
+            b.append("\n");
             i++;
         }
         return b.toString();

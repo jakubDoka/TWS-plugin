@@ -1,5 +1,6 @@
 package theWorst.dataBase;
 
+import arc.math.Mat;
 import arc.util.Time;
 import mindustry.entities.type.Player;
 import theWorst.Main;
@@ -41,13 +42,14 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     public String toString(){
         String special=trueRank==rank ? "none":"[#"+rank.color + "]" + rank.name() + "[]";
         String activity=connected>lastActive ? "[green]currently active[]":
-                "[gray]inactive for []" + Main.milsToTime(Time.timeSinceMillis(lastActive)) + "\n";
+                "[gray]inactive for []" + Main.milsToTime(Time.timeSinceMillis(lastActive));
         return "[orange]==PLayer data==[]\n\n" +
+                "[yellow]Level:[]" + getLevel() + " | [yellow]server ID:[]" + DataBase.getIndex(this) + "\n" +
                 "[gray]name:[] " + originalName + "\n" +
                 "[gray]rank:[] [#"+trueRank.color + "]" + trueRank.name() + "[]\n" +
                 "[gray]special rank:[] " + special + "\n" +
                 "[gray]playtime:[] " + Main.milsToTime(playTime) + "\n" +
-                "[gray]server age:" + Main.milsToTime(Time.timeSinceMillis(born)) + "\n" +
+                "[gray]server age[]: " + Main.milsToTime(Time.timeSinceMillis(born)) + "\n" +
                 activity + "\n" +
                 "[gray]games played:[] " + gamesPlayed + "\n" +
                 "[gray]games won:[] " + gamesWon + "\n" +
@@ -57,6 +59,27 @@ public class PlayerData implements Cloneable,java.io.Serializable{
                 "[gray]successful factory votes:[] " +factoryVotes+"\n" +
                 "[gray]enemies killed:[] " + enemiesKilled + "\n" +
                 "[gray]deaths:[] " + deaths;
+    }
+
+    public int getLevel(){
+        long value=buildingsBuilt*2+
+                buildingsBroken*2+
+                gamesWon*200+
+                gamesPlayed*2+
+                loadoutVotes*100+
+                factoryVotes*100+
+                enemiesKilled*5+
+                playTime/(1000*60);
+        int level=1;
+        int first=100;
+        while (true){
+           value-=first* Math.pow(1.1,level);
+           if(value<0){
+               break;
+           }
+           level++;
+        }
+        return level;
     }
 
     public Object clone() throws CloneNotSupportedException{return super.clone();}
@@ -70,4 +93,6 @@ public class PlayerData implements Cloneable,java.io.Serializable{
         playTime+=Time.timeSinceMillis(connected);
         lastActive=Time.millis();
     }
+
+
 }

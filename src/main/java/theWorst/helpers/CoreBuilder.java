@@ -15,6 +15,13 @@ import static mindustry.Vars.world;
 
 public class CoreBuilder implements Votable {
 
+    public static int getStorageSize(Player player) {
+        int size = 0;
+        for (CoreBlock.CoreEntity c : player.getTeam().cores()) {
+            size += c.block.itemCapacity;
+        }
+        return size;
+    }
 
     @Override
     public void launch(Package p) {
@@ -38,7 +45,7 @@ public class CoreBuilder implements Votable {
             return null;
         }
 
-        int storage = Main.getStorageSize(player);
+        int storage = getStorageSize(player);
         int cost = (int) (storage * .20f);
         switch (object) {
             case "normal":

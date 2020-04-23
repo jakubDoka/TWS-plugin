@@ -7,21 +7,18 @@ import arc.util.Timer;
 import mindustry.entities.type.Player;
 
 import mindustry.gen.Call;
-import org.json.simple.JSONObject;
 import theWorst.dataBase.DataBase;
 import theWorst.dataBase.Perm;
 import theWorst.dataBase.Rank;
 import theWorst.interfaces.Interruptible;
-import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
 import java.util.TimerTask;
 
 import static mindustry.Vars.*;
 
-public class AntiGriefer implements Votable, LoadSave , Interruptible {
+public class AntiGriefer implements Votable, Interruptible {
     public static final String message= Main.prefix+"[pink]Okay griefer.";
-    static ArrayMap<String ,Long> griefers=new ArrayMap<>();
 
     Emergency emergency= new Emergency();
 
@@ -111,25 +108,6 @@ public class AntiGriefer implements Votable, LoadSave , Interruptible {
             return null;
         }
         return p;
-    }
-
-    @Override
-    public void load(JSONObject data) {
-        if(data==null){
-            return;
-        }
-        for(Object o:data.keySet()){
-            griefers.put((String)o,(Long)data.get(o));
-        }
-    }
-
-    @Override
-    public JSONObject save() {
-        JSONObject data=new JSONObject();
-        for(String key:griefers.keys()){
-            data.put(key,griefers.get(key));
-        }
-        return data;
     }
 
     static class Emergency{
