@@ -126,7 +126,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             return null;
         }
         Item targetItem = getItemByName(object);
-        if (targetItem == null && !(object.equals(Main.ALL) && !toBase)) {
+        if (targetItem == null && !(object.equals("all") && !toBase)) {
             player.sendMessage(Main.prefix + "The [scarlet] " + object + "[] doesn't exist.");
             return null;
         }

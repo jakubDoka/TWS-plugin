@@ -42,7 +42,7 @@ import static java.lang.Math.sqrt;
 import static mindustry.Vars.*;
 
 public class Main extends Plugin {
-    public static final String ALL = "all";
+    public static final String configFile ="settings.json";
     public static final String saveFile = "save.json";
     public static final String directory = "config/mods/The_Worst/";
     public static final String prefix = "[scarlet][Server][]";
@@ -224,7 +224,6 @@ public class Main extends Plugin {
                 days%365,hour%24,min%60,sec%60);
     }
 
-
     public void updateHud(){
         updateThread=Timer.schedule(()-> {
             StringBuilder b=new StringBuilder();
@@ -263,14 +262,12 @@ public class Main extends Plugin {
             Log.info("No saves found.New save file " + path + " will be created.");
             save();
         } catch (ParseException ex) {
-            Log.info("Json file is invalid.");
+            Log.info("Json file "+path+" is invalid.");
         } catch (IOException ex) {
             Log.info("Error when loading data from " + path + ".");
         }
         dataBase.load();
     }
-
-
 
     public void save() {
         JSONObject saveData = new JSONObject();
@@ -283,6 +280,34 @@ public class Main extends Plugin {
             Log.info("Error when saving data.");
         }
         dataBase.save();
+    }
+
+    public void config(){
+        String path = directory + configFile;
+        try (FileReader fileReader = new FileReader(path)) {
+            JSONParser jsonParser = new JSONParser();
+            Object obj = jsonParser.parse(fileReader);
+            JSONObject saveData = (JSONObject) obj;
+        }catch (FileNotFoundException ex) {
+            Log.info("No general config found.New save file " + path + " will be created.");
+            createDefaultConfig();
+        } catch (ParseException ex) {
+            Log.info("Json file "+path+" is invalid.");
+        } catch (IOException ex) {
+            Log.info("Error when loading settings from " + path + ".");
+        }
+    }
+
+    private void createDefaultConfig() {
+        JSONObject saveData = new JSONObject();
+        loadSave.keys().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
+        try (FileWriter file = new FileWriter(directory + saveFile)) {
+            file.write(saveData.toJSONString());
+            file.close();
+            Log.info("Data saved.");
+        } catch (IOException ex) {
+            Log.info("Error when saving data.");
+        }
     }
 
     private void autoSave(int interval){
@@ -307,7 +332,7 @@ public class Main extends Plugin {
     }
 
     public static String report(String object, int amount) {
-        return "[orange]" + (object.equals(Main.ALL) ? Main.ALL : amount + " " + object) + "[]";
+        return "[orange]" + (object.equals("all") ? "all" : amount + " " + object) + "[]";
     }
 
     public static String timeToString(int time) {
@@ -583,7 +608,7 @@ public class Main extends Plugin {
 
         handler.<Player>register("maps","[page]","displays all maps",
                 (arg, player) -> {
-            Integer page=processArg(player,"Page",arg[0]);
+            Integer page= arg.length>0 ? processArg(player,"Page",arg[0]):1;
             if(page==null)return;
             Call.onInfoMessage(player.con, changer.info(page));
         });

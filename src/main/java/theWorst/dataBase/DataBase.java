@@ -55,7 +55,6 @@ public class DataBase {
         String uuid=player.uuid;
         if(data.containsKey(uuid)) {
             getData(player).connect(player);
-            updateName(player);
             updateRank(player);
             return;
         }

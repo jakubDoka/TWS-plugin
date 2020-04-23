@@ -14,7 +14,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import arc.struct.ArrayMap;
 import arc.struct.Array;
@@ -165,11 +164,10 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             player.sendMessage(Main.prefix + "Factory is doing maximum amount of tasks actually.");
             return null;
         }
-        if (!stats.containsKey(object) && !(object.equals(Main.ALL) && toBase)) {
+        if (!stats.containsKey(object) && !(object.equals("all") && toBase)) {
             player.sendMessage(Main.prefix + "Factory cannot build nor send [scarlet] " + object + "[].");
             return null;
         }
-        UnitType targetUnit = getUnitByName(object);
         boolean hasEnough = true;
         Package p;
         if (!toBase) {

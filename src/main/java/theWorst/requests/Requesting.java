@@ -15,6 +15,11 @@ public class Requesting {
         config.put(THREAD_COUNT, 3);
     }
 
+    Array<Request> getRequests(){
+        return requests;
+    }
+    void fail(String object, int amount){}
+
     public ArrayMap<String, Integer> getConfig() {
         return config;
     }
