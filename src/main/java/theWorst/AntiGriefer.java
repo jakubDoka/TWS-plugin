@@ -61,7 +61,7 @@ public class AntiGriefer implements Votable, Interruptible {
 
     public static boolean verifyTarget(Player target,Player player,String matter){
         if(DataBase.hasPerm(target, Perm.higher.getValue())){
-            player.sendMessage(Main.prefix+"You cannot kick "+DataBase.getTrueRank(player).getRank()+".");
+            player.sendMessage(Main.prefix+"You cannot kick " + DataBase.getTrueRank(player).name() + ".");
             return false;
         }
         if(target.isAdmin){

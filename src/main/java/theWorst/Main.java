@@ -175,7 +175,6 @@ public class Main extends Plugin {
 
                 return antiGriefer.canBuild(player);
             });
-
             netServer.admins.addChatFilter((player,message)->{
                 if((message.equals("y") || message.equals("n")) && vote.voting){
                     return null;
@@ -234,6 +233,7 @@ public class Main extends Plugin {
             }
             for(Player p:playerGroup){
                 if(DataBase.getData(p).hudEnabled){
+                    if(b.length()==0) return;
                     Call.setHudText(p.con,b.toString().substring(0,b.length()-1));
                 }else {
                     Call.setHudText(p.con,"");
@@ -448,6 +448,16 @@ public class Main extends Plugin {
         handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
 
         handler.register("w-save", "Saves theWorst data.", arg -> save());
+
+        handler.register("w-unkick","<ID/uuid>","Erases kick status of player player.",arg->{
+            PlayerData pd=DataBase.findData(arg[0]);
+            if(pd==null){
+                Log.info("Player not found.");
+                return;
+            }
+            pd.getInfo().lastKicked=Time.millis();
+            Log.info(pd.originalName+" is not kicked anymore... hopefully.");
+                });
 
         handler.register("w-database","[search]", "Shows database,list of all players that " +
                 "ewer been on server.Use search as in browser.", arg ->

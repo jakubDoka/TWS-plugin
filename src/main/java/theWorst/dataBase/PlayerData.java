@@ -1,11 +1,12 @@
 package theWorst.dataBase;
 
-import arc.math.Mat;
 import arc.util.Time;
 import mindustry.entities.type.Player;
+import mindustry.net.Administration;
 import theWorst.Main;
 
-import java.util.Date;
+import static mindustry.Vars.*;
+
 
 public class PlayerData implements Cloneable,java.io.Serializable{
     public Rank rank = Rank.newcomer;
@@ -30,12 +31,14 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     public String banReason = "";
     public String originalName = "";
     public String discordLink = "";
+    public String id;
 
 
 
 
     public PlayerData(Player player){
         lastActive=Time.millis();
+        id=player.getInfo().id;
         connect(player);
     }
 
@@ -59,6 +62,20 @@ public class PlayerData implements Cloneable,java.io.Serializable{
                 "[gray]successful factory votes:[] " +factoryVotes+"\n" +
                 "[gray]enemies killed:[] " + enemiesKilled + "\n" +
                 "[gray]deaths:[] " + deaths;
+    }
+
+    public String socialStatus(){
+        Administration.PlayerInfo info = getInfo();
+        long kickTime=info.lastKicked-Time.millis();
+        return "[gray][orange]--SOCIAL STATUS--[]\n\n"+
+                (info.banned ? "[scarlet]BANNED[]":"[green]NOT BANNED[]") +
+                "kicked [white]"+info.timesKicked+"[] times" +
+                (info.admin ? "[yellow]ADMIN[]":"NOT ADMIN") +
+                (kickTime>0 ? "[scarlet]kick ends after " + Main.milsToTime(kickTime) + "[]":"not kicked");
+    }
+
+    public Administration.PlayerInfo getInfo(){
+        return netServer.admins.getInfo(id);
     }
 
     public int getLevel(){

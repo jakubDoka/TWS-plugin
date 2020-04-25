@@ -11,7 +11,7 @@ import mindustry.net.Packets;
 import static mindustry.Vars.playerGroup;
 
 public class VoteKick{
-    final int kickDuration=60*60;
+    final int kickDuration=2*60;
     Player target;
     Array<String> voted = new Array<>();
     Timer.Task task;
@@ -52,11 +52,11 @@ public class VoteKick{
             player.sendMessage(Main.prefix+"You already voted,sit down.");
             return;
         }
-        if(player==target){
+        /*if(player==target){
             player.sendMessage(Main.prefix+"You cannot vote on your own trial.");
-        }
+        }*/
         if(!voting){
-            player.sendMessage(Main.prefix+"NO votekick to vote for, you may try to write just \"y\" or \"n\" to chat.");
+            player.sendMessage(Main.prefix+"No votekick to vote for, you may try to write just \"y\" or \"n\" to chat.");
         }
         votes += d;
         voted.add(player.uuid);
