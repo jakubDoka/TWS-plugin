@@ -29,6 +29,7 @@ import org.json.simple.parser.ParseException;
 import theWorst.dataBase.*;
 import theWorst.helpers.CoreBuilder;
 import theWorst.helpers.MapChanger;
+import theWorst.helpers.Tester;
 import theWorst.helpers.WaveSkipper;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
@@ -68,6 +69,7 @@ public class Main extends Plugin {
     WaveSkipper skipper = new WaveSkipper();
 
     DataBase dataBase=new DataBase();
+    Tester tester =new Tester();
     AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
     VoteKick voteKick=new VoteKick();
@@ -197,6 +199,8 @@ public class Main extends Plugin {
                 Log.info("Unable to create directory " + directory + ".");
             }
             load();
+            config();
+            tester.loadQuestions();
             autoSave(defaultAutoSaveFrequency);
             updateHud();
         });
@@ -225,22 +229,25 @@ public class Main extends Plugin {
 
     public void updateHud(){
         updateThread=Timer.schedule(()-> {
-            StringBuilder b=new StringBuilder();
-            for(Interruptible i:interruptibles){
-                String msg=i.getHudInfo();
-                if(msg==null) continue;
-                b.append(msg).append("\n");
-            }
-            for(Player p:playerGroup){
-                if(DataBase.getData(p).hudEnabled){
-                    if(b.length()==0) return;
-                    Call.setHudText(p.con,b.toString().substring(0,b.length()-1));
-                }else {
-                    Call.setHudText(p.con,"");
+            try {
+                StringBuilder b = new StringBuilder();
+                for (Interruptible i : interruptibles) {
+                    String msg = i.getHudInfo();
+                    if (msg == null) continue;
+                    b.append(msg).append("\n");
                 }
+                for (Player p : playerGroup.all()) {
+                    if (DataBase.getData(p).hudEnabled) {
+                        Call.setHudText(p.con, b.toString().substring(0, b.length() - 1));
+                    } else {
+                        Call.setHudText(p.con, "");
+                    }
+                }
+            }catch (Exception ex){
+                Log.info("something horrible happen");
             }
-
         },0,1);
+
     }
 
     public void load() {
@@ -288,8 +295,17 @@ public class Main extends Plugin {
             JSONParser jsonParser = new JSONParser();
             Object obj = jsonParser.parse(fileReader);
             JSONObject saveData = (JSONObject) obj;
+            JSONObject data =(JSONObject)saveData.get("loadout");
+            for(Object o:data.keySet()){
+                loadout.getConfig().put((String)o,getInt(data.get(o)));
+            }
+            data =(JSONObject)saveData.get("factory");
+            for(Object o:data.keySet()){
+                factory.getConfig().put((String)o,getInt(data.get(o)));
+            }
+            transportTime=getInt(saveData.get("transTime"));
         }catch (FileNotFoundException ex) {
-            Log.info("No general config found.New save file " + path + " will be created.");
+            Log.info("No settings found.New save file " + path + " will be created.");
             createDefaultConfig();
         } catch (ParseException ex) {
             Log.info("Json file "+path+" is invalid.");
@@ -299,14 +315,22 @@ public class Main extends Plugin {
     }
 
     private void createDefaultConfig() {
-        JSONObject saveData = new JSONObject();
-        loadSave.keys().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
-        try (FileWriter file = new FileWriter(directory + saveFile)) {
-            file.write(saveData.toJSONString());
-            file.close();
-            Log.info("Data saved.");
+        JSONObject configData = new JSONObject();
+        JSONObject load = new JSONObject();
+        for(String o:loadout.getConfig().keys()){
+            load.put(o,getInt(loadout.getConfig().get(o)));
+        }
+        configData.put("loadout",load);
+        load =new JSONObject();
+        for(String o:factory.getConfig().keys()){
+           load.put(o,getInt(factory.getConfig().get(o)));
+        }
+        configData.put("factory",load);
+        configData.put("transTime",180);
+        try (FileWriter file = new FileWriter(directory + configFile)) {
+            file.write(configData.toJSONString());
         } catch (IOException ex) {
-            Log.info("Error when saving data.");
+            Log.info("Error when creating settings.");
         }
     }
 
@@ -356,7 +380,7 @@ public class Main extends Plugin {
         player.sendMessage(prefix + "Invalid argument [scarlet]"+arg+"[], make sure you pick one of the options.");
     }
 
-    public Integer processArg(Player player, String what, String arg) {
+    public static Integer processArg(Player player, String what, String arg) {
         if (isNotInteger(arg)) {
             if(player==null){
                 Log.info(what + " has to be integer.[scarlet]" + arg + "[] is not.");
@@ -477,6 +501,7 @@ public class Main extends Plugin {
             }
 
             pd.rank=Rank.valueOf(arg[1]);
+            pd.trueRank=Rank.valueOf(arg[1]);
             Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
             Player p=findPlayer(arg[0]);
             if(p==null){
@@ -524,8 +549,11 @@ public class Main extends Plugin {
             }
         });
 
-        handler.register("w-apply-config", "Applies the factory configuration.", arg -> {
+        handler.register("w-apply-config", "Applies the factory configuration,settings and " +
+                "loads test quescions.", arg -> {
             factory.config();
+            config();
+            tester.loadQuestions();
             Log.info("Config applied.");
         });
 
@@ -793,6 +821,35 @@ public class Main extends Plugin {
 
             voteKick.aVoteKick(args[0],player);
 
+        });
+
+        handler.<Player>register("test","<start/egan/quit/numberOfOption>","Complete the test to " +
+                        "become verified player.",(args, player) -> tester.processAnswer(player,args[0]));
+        handler.<Player>register("set-Rank","<playerName/uuid/ID> <rankName>","Command for admins.",(args,player)->{
+            if(!player.isAdmin){
+                player.sendMessage(prefix+"You are not admin.");
+                return;
+            }
+            try{
+                Rank.valueOf(args[1]);
+            }catch (IllegalArgumentException e){
+                player.sendMessage(prefix+"Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
+                return;
+            }
+            PlayerData pd=DataBase.findData(args[0]);
+            if(pd==null ){
+                player.sendMessage(prefix+"Player not found.");
+                return;
+            }
+
+            pd.trueRank=Rank.valueOf(args[1]);
+            pd.rank=Rank.valueOf(args[1]);
+            player.sendMessage(prefix+"Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
+            Player p=findPlayer(args[0]);
+            if(p==null){
+                return;
+            }
+            DataBase.updateName(p);
         });
     }
 }
