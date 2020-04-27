@@ -5,9 +5,10 @@ import arc.util.Log;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import theWorst.Main;
-
 import java.io.*;
 import java.util.HashMap;
+
+import static mindustry.Vars.playerGroup;
 
 public class DataBase {
     static HashMap<String,PlayerData> data=new HashMap<>();
@@ -77,7 +78,14 @@ public class DataBase {
         }
         updateName(player);
     }
-
+    public static void setRank(PlayerData pd,Rank rank){
+        pd.rank=rank;
+        if(rank.permanent){
+            pd.trueRank=rank;
+        }
+        Player player=playerGroup.find(p->p.name.equals(pd.originalName));
+        if(player!=null) updateName(player);
+    }
     public static void setRank(Player player,String rank){
         setRank(player,Rank.valueOf(rank));
     }
@@ -87,14 +95,15 @@ public class DataBase {
         if(!player.isAdmin && (rank==Rank.griefer || rank==Rank.newcomer)) return;
         for(Rank r:Rank.values()){
             if(r.getValue()>rank.getValue() && r.condition(player)){
-                Call.sendMessage("[orange]"+player.name+"[] obtained "+r.getRank()+" rank.");
+                Call.sendMessage("[orange]"+player.name+"[] obtained "+r.getRankAnyway()+" rank.");
                 setRank(player,r);
                 return;
             }
         }
         if(!rank.permanent){
-            Call.sendMessage("[orange]"+player.name+"[] lost his rank.");
-            setRank(player,getTrueRank(player ));
+            setRank(player,getTrueRank(player));
+            Call.sendMessage("[orange]"+player.name+"[] lost his "+rank.getRankAnyway()+" rank.");
+
         }
     }
 

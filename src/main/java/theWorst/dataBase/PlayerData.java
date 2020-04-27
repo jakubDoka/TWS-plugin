@@ -43,13 +43,13 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     }
 
     public String toString(){
-        String special=trueRank==rank ? "none":"[#"+rank.color + "]" + rank.name() + "[]";
+        String special=trueRank==rank ? "none":rank.getRankAnyway();
         String activity=connected>lastActive ? "[green]currently active[]":
                 "[gray]inactive for []" + Main.milsToTime(Time.timeSinceMillis(lastActive));
         return "[orange]==PLayer data==[]\n\n" +
                 "[yellow]Level:[]" + getLevel() + " | [yellow]server ID:[]" + DataBase.getIndex(this) + "\n" +
                 "[gray]name:[] " + originalName + "\n" +
-                "[gray]rank:[] [#"+trueRank.color + "]" + trueRank.name() + "[]\n" +
+                "[gray]rank:[] " + trueRank.getRankAnyway() + "\n" +
                 "[gray]special rank:[] " + special + "\n" +
                 "[gray]playtime:[] " + Main.milsToTime(playTime) + "\n" +
                 "[gray]server age[]: " + Main.milsToTime(Time.timeSinceMillis(born)) + "\n" +

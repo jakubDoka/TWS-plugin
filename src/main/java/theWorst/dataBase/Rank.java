@@ -95,7 +95,7 @@ public enum Rank implements java.io.Serializable{
     Color color;
     Perm permission=Perm.normal;
     boolean displayed=true;
-    boolean permanent=true;
+    public boolean permanent=true;
     int required = 0;
     int frequency = 0;
     String description="missing description";
@@ -122,6 +122,10 @@ public enum Rank implements java.io.Serializable{
 
     public String getRank() {
         return displayed ? "[#"+color+"]<"+name()+">[]":"";
+    }
+
+    public String getRankAnyway() {
+        return  "[#"+color+"]<"+name()+">[]";
     }
 
     public boolean condition(Player player) {

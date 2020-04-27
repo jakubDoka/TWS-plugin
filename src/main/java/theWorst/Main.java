@@ -97,18 +97,20 @@ public class Main extends Plugin {
         });
         Events.on(BuildSelectEvent.class, e->{
             if(e.builder instanceof Player){
+                boolean happen =false;
                 Player player=(Player)e.builder;
                 CoreBlock.CoreEntity core=Loadout.getCore(player);
                 BuilderTrait.BuildRequest request = player.buildRequest();
                 if(DataBase.hasSpecialPerm(player,Perm.destruct) && request.breaking){
+                    happen=true;
                     for(ItemStack s:request.block.requirements){
                         core.items.add(s.item,s.amount/2);
                     }
                     Call.onDeconstructFinish(request.tile(),request.block,((Player) e.builder).id);
-                    return;
-                }
-                if(DataBase.hasSpecialPerm(player,Perm.build) && !request.breaking){
+
+                }else if(DataBase.hasSpecialPerm(player,Perm.build) && !request.breaking){
                     if(core.items.has(request.block.requirements)){
+                        happen=true;
                         for(ItemStack s:request.block.requirements){
                             core.items.remove(s);
                         }
@@ -117,6 +119,8 @@ public class Main extends Plugin {
                         e.tile.configure(request.config);
                     }
                 }
+                if(happen)
+                    Events.fire(new BlockBuildEndEvent(e.tile,player,e.team,e.breaking));
             }
                 });
 
@@ -499,9 +503,7 @@ public class Main extends Plugin {
                 Log.info("Player not found.");
                 return;
             }
-
-            pd.rank=Rank.valueOf(arg[1]);
-            pd.trueRank=Rank.valueOf(arg[1]);
+            DataBase.setRank(pd,Rank.valueOf(arg[1]));
             Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
             Player p=findPlayer(arg[0]);
             if(p==null){
@@ -646,8 +648,13 @@ public class Main extends Plugin {
 
         handler.<Player>register("maps","[page]","displays all maps",
                 (arg, player) -> {
-            Integer page= arg.length>0 ? processArg(player,"Page",arg[0]):1;
-            if(page==null)return;
+            Integer page;
+            if(arg.length>0){
+                page=processArg(player,"Page",arg[0]);
+                if(page==null)return;
+            }else {
+                page=1;
+            }
             Call.onInfoMessage(player.con, changer.info(page));
         });
 
@@ -842,9 +849,8 @@ public class Main extends Plugin {
                 return;
             }
 
-            pd.trueRank=Rank.valueOf(args[1]);
-            pd.rank=Rank.valueOf(args[1]);
-            player.sendMessage(prefix+"Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
+            DataBase.setRank(pd,Rank.valueOf(args[1]));
+            player.sendMessage(prefix+"Rank of player " + pd.originalName + " is now " + pd.rank.getRankAnyway() + ".");
             Player p=findPlayer(args[0]);
             if(p==null){
                 return;

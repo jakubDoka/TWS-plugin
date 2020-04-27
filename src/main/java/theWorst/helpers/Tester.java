@@ -73,18 +73,17 @@ public class Tester {
             }
     }
 
-
     public void ask(Player player,int idx){
         if(idx>=questions.size){
             if(tested.get(player.uuid)[1]/(float)questions.size>.8){
-                player.sendMessage(Main.prefix+"[green]Congratulation you passed the test! You will obtain" +
+                player.sendMessage(Main.prefix+"[green]Congratulation you passed the test! You will obtain " +
                         "rank VERIFIED witch means that emergency no longer affects you.");
                 DataBase.setRank(player, Rank.verified);
                 tested.removeKey(player.uuid);
                 return;
             }
             player.sendMessage(Main.prefix+"[scarlet]You failed the test.You can try it later.");
-            Timer.schedule(()->tested.removeKey(player.uuid),60);
+            Timer.schedule(()->tested.removeKey(player.uuid),15*60);
             return;
         }
         String question=questions.keys().toArray().get(idx);
