@@ -27,6 +27,7 @@ public class Tester {
     public void loadQuestions(){
         String path= Main.directory+testFile;
         try (FileReader fileReader = new FileReader(path)) {
+            questions.clear();
             JSONParser jsonParser = new JSONParser();
             Object obj = jsonParser.parse(fileReader);
             JSONObject test = (JSONObject) obj;
