@@ -71,13 +71,6 @@ public class DataBase {
         player.name=data.originalName+data.rank.getRank();
     }
 
-    public static void setRank(Player player,Rank rank){
-        getData(player).rank=rank;
-        if(rank.permanent){
-            getData(player).trueRank=rank;
-        }
-        updateName(player);
-    }
     public static void setRank(PlayerData pd,Rank rank){
         pd.rank=rank;
         if(rank.permanent){
@@ -86,6 +79,11 @@ public class DataBase {
         Player player=playerGroup.find(p->p.name.equals(pd.originalName));
         if(player!=null) updateName(player);
     }
+
+    public static void setRank(Player player,Rank rank){
+       setRank(getData(player),rank);
+    }
+
     public static void setRank(Player player,String rank){
         setRank(player,Rank.valueOf(rank));
     }
