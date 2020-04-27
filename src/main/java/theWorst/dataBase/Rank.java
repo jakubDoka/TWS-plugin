@@ -20,6 +20,7 @@ public enum Rank implements java.io.Serializable{
     admin(Color.blue,Perm.higher){
         {
             displayed=false;
+            permanent=false;
         }
         @Override
         public boolean condition(Player player) {
