@@ -492,18 +492,18 @@ public class Main extends Plugin {
                 Log.info(dataBase.report(arg.length==1 ? arg[0]:null,true,-1)));
 
         handler.register("w-set-rank","<uuid/name/index> <rank>","",arg->{
-            try{
-                Rank.valueOf(arg[1]);
-            }catch (IllegalArgumentException e){
-                Log.info("Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
-                return;
-            }
+
             PlayerData pd=DataBase.findData(arg[0]);
             if(pd==null ){
                 Log.info("Player not found.");
                 return;
             }
-            DataBase.setRank(pd,Rank.valueOf(arg[1]));
+            try{
+                DataBase.setRank(pd,Rank.valueOf(arg[1]));
+            }catch (IllegalArgumentException e){
+                Log.info("Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
+                return;
+            }
             Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
             Player p=findPlayer(arg[0]);
             if(p==null){
@@ -837,19 +837,25 @@ public class Main extends Plugin {
                 player.sendMessage(prefix+"You are not admin.");
                 return;
             }
-            try{
-                Rank.valueOf(args[1]);
-            }catch (IllegalArgumentException e){
-                player.sendMessage(prefix+"Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
-                return;
-            }
+
             PlayerData pd=DataBase.findData(args[0]);
             if(pd==null ){
                 player.sendMessage(prefix+"Player not found.");
                 return;
             }
 
-            DataBase.setRank(pd,Rank.valueOf(args[1]));
+            try{
+                Rank rank=Rank.valueOf(args[1]);
+                if (rank==Rank.admin || rank==Rank.owner || rank==Rank.pluginDev){
+                    player.sendMessage(prefix+"You cannot use this rank.");
+                    return;
+                }
+                DataBase.setRank(pd,rank);
+            }catch (IllegalArgumentException e){
+                player.sendMessage(prefix+"Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
+                return;
+            }
+
             player.sendMessage(prefix+"Rank of player " + pd.originalName + " is now " + pd.rank.getRankAnyway() + ".");
             Player p=findPlayer(args[0]);
             if(p==null){
