@@ -90,7 +90,7 @@ public class Main extends Plugin {
         });
 
         Events.on(BlockBuildEndEvent.class, e->{
-            
+            if(e.player == null) return;
             if(e.tile.block().buildCost/60<1) return;
 
             dataBase.updateStats(e.player,e.breaking ? Stat.buildingsBroken:Stat.buildingsBuilt);
