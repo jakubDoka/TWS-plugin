@@ -34,7 +34,7 @@ public class VoteKick{
             }
         }
 
-        if(AntiGriefer.verifyTarget(found,player,"kick")) return;
+        if(!AntiGriefer.verifyTarget(found,player,"kick")) return;
 
         votes=0;
         this.target = found;
@@ -52,11 +52,12 @@ public class VoteKick{
             player.sendMessage(Main.prefix + "You already voted,sit down.");
             return;
         }
-        /*if(player==target){
+        if(player==target){
             player.sendMessage(Main.prefix+"You cannot vote on your own trial.");
-        }*/
+        }
         if(!voting){
             player.sendMessage(Main.prefix+"No votekick to vote for, you may try to write just \"y\" or \"n\" to chat.");
+            return;
         }
         votes += d;
         voted.add(player.con.address);
