@@ -48,8 +48,8 @@ public class VoteKick{
     }
 
     void vote(Player player, int d){
-        if (voted.contains(player.con.address)) {
-            player.sendMessage(Main.prefix + "You already voted,sit down.");
+        if(voted.contains(player.uuid)){
+            player.sendMessage(Main.prefix+"You already voted,sit down.");
             return;
         }
         /*if(player==target){
@@ -59,7 +59,7 @@ public class VoteKick{
             player.sendMessage(Main.prefix+"No votekick to vote for, you may try to write just \"y\" or \"n\" to chat.");
         }
         votes += d;
-        voted.add(player.con.address);
+        voted.add(player.uuid);
         if(checkPass()){
             Call.sendMessage(Strings.format(Main.prefix+"[orange]{0}[] has voted on kicking[scarlet] {1}[]. ({2}/{3})\nType [orange]/vote <y/n>[] to agree.",
                     player.name, target.name, votes, Vote.getRequired()));
