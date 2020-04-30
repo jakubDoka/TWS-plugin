@@ -812,6 +812,7 @@ public class Main extends Plugin {
             }
             if(voteKick.voting){
                 player.sendMessage(prefix+"Votekick in process.");
+                return;
             }
             if(playerGroup.size() < 3) {
                 player.sendMessage(prefix+"At least 3 players are needed to start a votekick.");

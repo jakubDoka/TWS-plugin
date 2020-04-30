@@ -9,6 +9,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import theWorst.AntiGriefer;
 import theWorst.Main;
 import theWorst.dataBase.DataBase;
 import theWorst.dataBase.Perm;
@@ -99,6 +100,10 @@ public class Tester {
         String uuid=player.uuid;
         if(DataBase.hasPerm(player, Perm.high.getValue())){
             player.sendMessage(Main.prefix+"You don t need test, you are already verified.");
+            return;
+        }
+        if (AntiGriefer.isGriefer(player)){
+            AntiGriefer.abuse(player);
             return;
         }
         if(tested.containsKey(uuid) && tested.get(uuid)[0]>=questions.size){
