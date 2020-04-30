@@ -469,6 +469,15 @@ public class Main extends Plugin {
             }
         }
     }
+
+    public static String toString(Array<String> struct){
+        StringBuilder b=new StringBuilder();
+        for(String s :struct){
+            b.append(s).append(" ");
+        }
+        return b.toString();
+    }
+
     @Override
     public void registerServerCommands(CommandHandler handler) {
         handler.removeCommand("say");
@@ -477,47 +486,47 @@ public class Main extends Plugin {
 
         handler.register("w-save", "Saves theWorst data.", arg -> save());
 
-        handler.register("w-unkick","<ID/uuid>","Erases kick status of player player.",arg->{
-            PlayerData pd=DataBase.findData(arg[0]);
-            if(pd==null){
+        handler.register("w-unkick", "<ID/uuid>", "Erases kick status of player player.", arg -> {
+            PlayerData pd = DataBase.findData(arg[0]);
+            if (pd == null) {
                 Log.info("Player not found.");
                 return;
             }
-            pd.getInfo().lastKicked=Time.millis();
-            Log.info(pd.originalName+" is not kicked anymore... hopefully.");
-                });
+            pd.getInfo().lastKicked = Time.millis();
+            Log.info(pd.originalName + " is not kicked anymore... hopefully.");
+        });
 
-        handler.register("w-database","[search]", "Shows database,list of all players that " +
+        handler.register("w-database", "[search]", "Shows database,list of all players that " +
                 "ewer been on server.Use search as in browser.", arg ->
-                Log.info(dataBase.report(arg.length==1 ? arg[0]:null,true,-1)));
+                Log.info(dataBase.report(arg.length == 1 ? arg[0] : null, true, -1)));
 
-        handler.register("w-set-rank","<uuid/name/index> <rank>","",arg->{
+        handler.register("w-set-rank", "<uuid/name/index> <rank>", "", arg -> {
 
-            PlayerData pd=DataBase.findData(arg[0]);
-            if(pd==null ){
+            PlayerData pd = DataBase.findData(arg[0]);
+            if (pd == null) {
                 Log.info("Player not found.");
                 return;
             }
-            try{
-                DataBase.setRank(pd,Rank.valueOf(arg[1]));
-            }catch (IllegalArgumentException e){
-                Log.info("Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
+            try {
+                DataBase.setRank(pd, Rank.valueOf(arg[1]));
+            } catch (IllegalArgumentException e) {
+                Log.info("Rank not found. Ranks:" + Arrays.toString(Rank.values()));
                 return;
             }
             Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
-            Player p=findPlayer(arg[0]);
-            if(p==null){
-                p=playerGroup.find(player->player.uuid.equalsIgnoreCase(arg[0]));
-                if(p==null){
+            Player p = findPlayer(arg[0]);
+            if (p == null) {
+                p = playerGroup.find(player -> player.uuid.equalsIgnoreCase(arg[0]));
+                if (p == null) {
                     return;
                 }
             }
             DataBase.updateName(p);
         });
 
-        handler.register("w-info","<uuid/name/index>","Displays info about player.",arg->{
-            PlayerData pd=DataBase.findData(arg[0]);
-            if(pd==null ) {
+        handler.register("w-info", "<uuid/name/index>", "Displays info about player.", arg -> {
+            PlayerData pd = DataBase.findData(arg[0]);
+            if (pd == null) {
                 Log.info("Player not found. Search by name applies only on online players.");
                 return;
             }
@@ -560,8 +569,8 @@ public class Main extends Plugin {
         });
 
         handler.register("w-trans-time", "[value]", "Sets transport time.", arg -> {
-            if(arg.length==0){
-                Log.info("trans-time is "+transportTime+".");
+            if (arg.length == 0) {
+                Log.info("trans-time is " + transportTime + ".");
                 return;
             }
             if (isNotInteger(arg[0])) {
@@ -569,53 +578,24 @@ public class Main extends Plugin {
                 return;
             }
             transportTime = Integer.parseInt(arg[0]);
-            Log.info("trans-time set to "+transportTime+".");
+            Log.info("trans-time set to " + transportTime + ".");
         });
 
-        handler.register("w-options","shows options for w command",arg->{
-            for(String key:configured.keys()){
-                Log.info(key+":"+ toString(configured.get(key).getConfig().keys().toArray()));
+        handler.register("w-options", "shows options for w command", arg -> {
+            for (String key : configured.keys()) {
+                Log.info(key + ":" + toString(configured.get(key).getConfig().keys().toArray()));
             }
         });
 
-        handler.register("w-autoSave","[frequency]","Initializes autosave or stops it.",arg->{
-            Integer frequency=processArg(null,"Frequency",arg[0]);
-            if(frequency==null) return;
-            if( frequency==0){
+        handler.register("w-autoSave", "[frequency]", "Initializes autosave or stops it.", arg -> {
+            Integer frequency = processArg(null, "Frequency", arg[0]);
+            if (frequency == null) return;
+            if (frequency == 0) {
                 Log.info("If you want kill-server command so badly, you can open an issue on github.");
                 return;
             }
             autoSave(frequency);
         });
-
-        handler.register("w", "<target> <property> <value>", "Sets property of target to value/integer.", arg -> {
-            if (!configured.containsKey(arg[0])) {
-                Log.info("Invalid target.Valid targets:" + toString(configured.keys().toArray()));
-                return;
-            }
-
-            ArrayMap<String, Integer> config = configured.get(arg[0]).getConfig();
-            if (!config.containsKey(arg[1])) {
-                Log.info(arg[0] + " has no property " + arg[1] + ". Valid properties:" + toString(config.keys().toArray()));
-                return;
-
-            }
-            Integer value=processArg(null,"Value",arg[2]);
-            if(value==null) return;
-            config.put(arg[1], value);
-            Log.info("Property changed.");
-        });
-
-        handler.register("say","<text...>","Send message to all players.",
-                arg-> Call.sendMessage(prefix+arg[0]));
-
-    }
-    public static String toString(Array<String> struct){
-        StringBuilder b=new StringBuilder();
-        for(String s :struct){
-            b.append(s).append(" ");
-        }
-        return b.toString();
     }
 
     @Override

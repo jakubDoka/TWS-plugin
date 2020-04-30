@@ -57,6 +57,7 @@ public class DataBase {
         if(data.containsKey(uuid)) {
             getData(player).connect(player);
             updateRank(player);
+            updateName(player);
             return;
         }
         data.put(uuid,new PlayerData(player));

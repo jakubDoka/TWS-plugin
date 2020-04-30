@@ -54,6 +54,7 @@ public class VoteKick{
         }
         if(player==target){
             player.sendMessage(Main.prefix+"You cannot vote on your own trial.");
+            return;
         }
         if(!voting){
             player.sendMessage(Main.prefix+"No votekick to vote for, you may try to write just \"y\" or \"n\" to chat.");
