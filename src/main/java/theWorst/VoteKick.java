@@ -35,7 +35,7 @@ public class VoteKick{
         }
 
         if(!AntiGriefer.verifyTarget(found,player,"kick")) return;
-
+        voting=true;
         votes=0;
         this.target = found;
         vote(player, 1);
