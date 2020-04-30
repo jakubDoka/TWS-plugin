@@ -20,16 +20,13 @@ public enum Rank implements java.io.Serializable{
     admin(Color.blue,Perm.higher){
         {
             displayed=false;
-            permanent=false;
-        }
-        @Override
-        public boolean condition(Player player) {
-            return player.isAdmin;
+            isAdmin=true;
         }
     },
     pluginDev(Color.olive,Perm.higher){
         {
             description="Its me Mlokis.";
+            isAdmin=true;
         }
     },
     depositor(Items.surgealloy.color,Perm.loadout){
@@ -92,10 +89,15 @@ public enum Rank implements java.io.Serializable{
             return check(data,data.buildingsBroken);
         }
     },
-    owner(Color.gold,Perm.highest);
+    owner(Color.gold,Perm.highest){
+        {
+            isAdmin=true;
+        }
+    };
     Color color;
     Perm permission=Perm.normal;
     boolean displayed=true;
+    public boolean isAdmin=false;
     public boolean permanent=true;
     int required = 0;
     int frequency = 0;

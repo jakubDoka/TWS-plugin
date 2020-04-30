@@ -4,10 +4,12 @@ import arc.math.Mathf;
 import arc.util.Log;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
+import mindustry.net.Administration;
 import theWorst.Main;
 import java.io.*;
 import java.util.HashMap;
 
+import static mindustry.Vars.netServer;
 import static mindustry.Vars.playerGroup;
 
 public class DataBase {
@@ -58,6 +60,7 @@ public class DataBase {
             getData(player).connect(player);
             updateRank(player);
             updateName(player);
+            player.isAdmin=getTrueRank(player).isAdmin;
             return;
         }
         data.put(uuid,new PlayerData(player));
@@ -74,11 +77,20 @@ public class DataBase {
 
     public static void setRank(PlayerData pd,Rank rank){
         pd.rank=rank;
+        Administration.PlayerInfo inf=netServer.admins.getInfo(pd.id);
         if(rank.permanent){
             pd.trueRank=rank;
         }
+        if(rank.isAdmin){
+            netServer.admins.adminPlayer(inf.id,inf.adminUsid);
+        }else {
+            netServer.admins.unAdminPlayer(inf.id);
+        }
         Player player=playerGroup.find(p->p.name.equals(pd.originalName));
-        if(player!=null) updateName(player);
+        if(player!=null){
+            updateName(player);
+            player.isAdmin=rank.isAdmin;
+        }
     }
 
     public static void setRank(Player player,Rank rank){

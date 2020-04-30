@@ -481,6 +481,7 @@ public class Main extends Plugin {
     @Override
     public void registerServerCommands(CommandHandler handler) {
         handler.removeCommand("say");
+        handler.removeCommand("admin");
 
         handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
 
@@ -493,7 +494,7 @@ public class Main extends Plugin {
                 return;
             }
             pd.getInfo().lastKicked = Time.millis();
-            Log.info(pd.originalName + " is not kicked anymore... hopefully.");
+            Log.info(pd.originalName + " is not kicked anymore.");
         });
 
         handler.register("w-database", "[search]", "Shows database,list of all players that " +
@@ -533,7 +534,7 @@ public class Main extends Plugin {
             Log.info(pd.toString());
         });
 
-        handler.register("spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
+        handler.register("w-spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
             if (playerGroup.size() == 0) {
                 Log.info("There is no one logged, why bother spawning units?");
             }
@@ -579,12 +580,6 @@ public class Main extends Plugin {
             }
             transportTime = Integer.parseInt(arg[0]);
             Log.info("trans-time set to " + transportTime + ".");
-        });
-
-        handler.register("w-options", "shows options for w command", arg -> {
-            for (String key : configured.keys()) {
-                Log.info(key + ":" + toString(configured.get(key).getConfig().keys().toArray()));
-            }
         });
 
         handler.register("w-autoSave", "[frequency]", "Initializes autosave or stops it.", arg -> {
@@ -827,7 +822,7 @@ public class Main extends Plugin {
 
             try{
                 Rank rank=Rank.valueOf(args[1]);
-                if (rank==Rank.admin || rank==Rank.owner || rank==Rank.pluginDev){
+                if (rank.isAdmin){
                     player.sendMessage(prefix+"You cannot use this rank.");
                     return;
                 }
