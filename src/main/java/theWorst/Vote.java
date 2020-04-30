@@ -53,7 +53,7 @@ public class Vote implements Interruptible {
         }
         if(isRecent(requester)){
             requester.sendMessage(Main.prefix+"Your last vote failed,to prevent spam you have to wait "
-                    +Main.timeToString(recent.get(requester.uuid))+".");
+                    +Main.timeToString(recent.get(requester.con.address))+".");
             return;
         }
         this.votable = votable;
@@ -81,22 +81,22 @@ public class Vote implements Interruptible {
     }
 
     private boolean isRecent(Player player) {
-        return recent.containsKey(player.uuid);
+        return recent.containsKey(player.con.address);
     }
 
     public void addToRecent(Player player){
         if(DataBase.hasPerm(player, Perm.high.getValue()))return;
-        recent.put(player.uuid, voteCooldown);
+        recent.put(player.con.address, voteCooldown);
         Timer.schedule(new Timer.Task(){
             @Override
             public void run() {
-                int time=recent.get(player.uuid);
+                int time=recent.get(player.con.address);
                 if(time==0){
-                    recent.remove(player.uuid);
+                    recent.remove(player.con.address);
                     this.cancel();
                     return;
                 }
-                recent.put(player.uuid,time-1);
+                recent.put(player.con.address,time-1);
             }
         },0,1);
 
@@ -115,12 +115,12 @@ public class Vote implements Interruptible {
     }
 
     public void addVote(Player player, String vote) {
-        if (voted.contains(player.uuid)) {
+        if (voted.contains(player.con.address)) {
             player.sendMessage(Main.prefix + "You already voted,sit down!");
             return;
         }
 
-        voted.add(player.uuid);
+        voted.add(player.con.address);
         if (AntiGriefer.isGriefer(player)){
             AntiGriefer.abuse(player);
             return;
