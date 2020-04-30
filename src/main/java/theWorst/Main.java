@@ -75,7 +75,7 @@ public class Main extends Plugin {
     VoteKick voteKick=new VoteKick();
 
     public Main() {
-        Events.on(PlayerConnect.class, e -> dataBase.register(e.player));
+        Events.on(PlayerJoin.class, e -> dataBase.register(e.player));
 
         Events.on(PlayerLeave.class,e-> dataBase.onDisconnect(e.player));
 
