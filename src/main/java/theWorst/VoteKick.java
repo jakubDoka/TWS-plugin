@@ -11,7 +11,7 @@ import mindustry.net.Packets;
 import static mindustry.Vars.playerGroup;
 
 public class VoteKick{
-    final int kickDuration=2*60;
+    final int kickDuration=60*60;
     Player target;
     Array<String> voted = new Array<>();
     Timer.Task task;
