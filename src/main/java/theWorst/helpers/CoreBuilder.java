@@ -57,6 +57,10 @@ public class CoreBuilder implements Votable {
         }
         boolean can_build = true;
         CoreBlock.CoreEntity core = Loadout.getCore(player);
+        if(core==null) {
+            player.sendMessage(Main.prefix+"No cores no resources.");
+            return null;
+        }
         for (Item item : Main.items) {
             if (!core.items.has(item, cost)) {
                 can_build = false;
@@ -71,6 +75,7 @@ public class CoreBuilder implements Votable {
 
     public void build_core(int cost, Player player, Block core_type, int x, int y) {
         CoreBlock.CoreEntity core = Loadout.getCore(player);
+        if(core==null) return;
         Call.onConstructFinish(world.tile(x, y), core_type, 0, (byte) 0, player.getTeam(), false);
         if (world.tile(player.tileX(), player.tileY()).block() == core_type) {
             Call.sendMessage(Main.prefix + "Player [green]" + player.name + " []has taken a portion of resources to build a core!");
@@ -78,7 +83,7 @@ public class CoreBuilder implements Votable {
                 core.items.remove(item, cost);
             }
         } else {
-            player.sendMessage(Main.prefix + "Core spawn failed!Invalid placement!");
+            player.sendMessage(Main.prefix + "Core spawn failed!");
         }
     }
 }

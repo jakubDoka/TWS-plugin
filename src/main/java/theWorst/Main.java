@@ -1,9 +1,11 @@
 package theWorst;
 
 import arc.Events;
+import arc.math.Mathf;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
 import arc.util.*;
+import mindustry.core.World;
 import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
@@ -18,6 +20,7 @@ import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.ItemType;
 
+import java.awt.*;
 import java.io.*;
 import java.util.Arrays;
 
@@ -48,7 +51,7 @@ public class Main extends Plugin {
     public static final String configFile ="settings.json";
     public static final String saveFile = "save.json";
     public static final String directory = "config/mods/The_Worst/";
-    public static final String prefix = "[scarlet][Server][]";
+    public static final String prefix = "[gray][scarlet][Server][]";
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
     public static ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
@@ -64,10 +67,12 @@ public class Main extends Plugin {
 
     int defaultAutoSaveFrequency=5;
 
+    String hudMessage=null;
+
     Loadout loadout = new Loadout();
     Factory factory;
     CoreBuilder builder = new CoreBuilder();
-    MapChanger changer = new MapChanger();
+    MapChanger changer;
     WaveSkipper skipper = new WaveSkipper();
 
     DataBase dataBase=new DataBase();
@@ -87,8 +92,12 @@ public class Main extends Plugin {
                     dataBase.updateStats(p, Stat.gamesWon);
                 }
                 dataBase.updateStats(p, Stat.gamesPlayed);
-
             }
+            changer.endGame(e.winner==Team.sharded);
+        });
+
+        Events.on(PlayEvent.class, e->{
+            changer.startGame();
         });
 
         Events.on(BlockBuildEndEvent.class, e->{
@@ -102,6 +111,7 @@ public class Main extends Plugin {
                 boolean happen =false;
                 Player player=(Player)e.builder;
                 CoreBlock.CoreEntity core=Loadout.getCore(player);
+                if(core==null) return;
                 BuilderTrait.BuildRequest request = player.buildRequest();
                 if(DataBase.hasSpecialPerm(player,Perm.destruct) && request.breaking){
                     happen=true;
@@ -148,7 +158,11 @@ public class Main extends Plugin {
             }
         });
 
-        Events.on(WorldLoadEvent.class, e -> interruptibles.forEach(Interruptible::interrupt));
+        Events.on(WorldLoadEvent.class, e ->{
+            interruptibles.forEach(Interruptible::interrupt);
+
+        });
+
 
         Events.on(EventType.BuildSelectEvent.class, e -> {
             Array<Request> requests = factory.getRequests();
@@ -200,6 +214,7 @@ public class Main extends Plugin {
 
             load_items();
             factory = new Factory(loadout);
+            changer = new MapChanger();
             addToGroups();
             if (!makeDir()) {
                 Log.info("Unable to create directory " + directory + ".");
@@ -272,6 +287,9 @@ public class Main extends Plugin {
                     if (msg == null) continue;
                     b.append(msg).append("\n");
                 }
+                if(hudMessage!=null){
+                    b.append(hudMessage).append("\n");
+                }
                 for (Player p : playerGroup.all()) {
                     if (DataBase.getData(p).hudEnabled) {
                         Call.setHudText(p.con, b.toString().substring(0, b.length() - 1));
@@ -298,6 +316,7 @@ public class Main extends Plugin {
             loadSave.keys().forEach((k) -> loadSave.get(k).load((JSONObject) data.get(k)));
         },this::save);
         dataBase.load();
+        changer.load();
     }
 
     public void save() {
@@ -307,6 +326,7 @@ public class Main extends Plugin {
             return saveData;
         });
         dataBase.save();
+        changer.save();
     }
 
     public void config(){
@@ -487,6 +507,14 @@ public class Main extends Plugin {
         handler.removeCommand("say");
         handler.removeCommand("admin");
 
+        handler.register("say","<text...>", "send message to all players.", arg -> {
+            StringBuilder b=new StringBuilder();
+            for(String s:arg){
+                b.append(s).append(" ");
+            }
+            Call.sendMessage(prefix+b.toString());
+        });
+
         handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
 
         handler.register("w-save", "Saves theWorst data.", arg -> save());
@@ -614,6 +642,20 @@ public class Main extends Plugin {
             }
             autoSave(frequency);
         });
+        handler.register("w-set-hud-message","[message...]","sets hud message that everyone sees " +
+                "or disables it when no arg is provided,you don t have to use underscores.",args->{
+            if(args.length==0){
+                hudMessage=null;
+                Log.info("Hud message disabled.");
+                return;
+            }
+            StringBuilder b=new StringBuilder();
+            for(String s:args){
+                b.append(s).append(" ");
+            }
+            hudMessage=b.toString();
+            Log.info("Hud message set.");
+        });
     }
 
     @Override
@@ -644,10 +686,28 @@ public class Main extends Plugin {
             antiGriefer.switchEmergency(arg.length==1);
         });
 
-        handler.<Player>register("maps","[page]","displays all maps",
+        handler.<Player>register("maps","[page/rate/info] [mapName/mapIdx/1-10]","Displays list maps,rates current map or " +
+                        "display information about current or chosen map.",
                 (arg, player) -> {
             Integer page;
             if(arg.length>0){
+                if(arg[0].equals("info")){
+                    String stats=changer.getMapStats(arg.length==2 ? arg[1]:null);
+                    if(stats==null){
+                        player.sendMessage(prefix+"Map not found.");
+                        return;
+                    }
+                    Call.onInfoMessage(player.con,"[orange]--MAP STATS--[]\n\n"+stats);
+                    return;
+                }
+                if(arg[0].equals("rate")){
+                    if(notEnoughArgs(player,2,arg)) return;
+                    Integer rating=processArg(player,"rating",arg[1]);
+                    if(rating==null) return;
+                    rating= Mathf.clamp(rating,1,10);
+                    changer.rate(player,rating);
+                    return;
+                }
                 page=processArg(player,"Page",arg[0]);
                 if(page==null)return;
             }else {

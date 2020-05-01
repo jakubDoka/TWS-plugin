@@ -83,6 +83,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         DataBase.getData(p.target).loadoutVotes++;
         Item targetItem = getItemByName(p.object);
         CoreBlock.CoreEntity core = getCore(p.target);
+        if(core==null)return;
         int amount = getTransportAmount(targetItem, p.amount, core, p.toBase);
         int idx = getItemIdx(targetItem);
         if (p.toBase) {
@@ -131,6 +132,10 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             return null;
         }
         CoreBlock.CoreEntity core = getCore(player);
+        if(core==null){
+            player.sendMessage(Main.prefix + "Loadout cannot find any core.");
+            return null;
+        }
         if (getTransportAmount(targetItem, amount, core, toBase) == 0) {
             player.sendMessage(Main.prefix + "Nothing to transport.");
             return null;
@@ -146,6 +151,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
 
     public static CoreBlock.CoreEntity getCore(Player p) {
         Teams.TeamData teamData = state.teams.get(p.getTeam());
+        if(teamData.cores.isEmpty()) return null;
         return teamData.cores.first();
     }
 
