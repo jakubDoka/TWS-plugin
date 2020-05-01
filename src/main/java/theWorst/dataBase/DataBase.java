@@ -225,7 +225,15 @@ public class DataBase {
             }
             PlayerData pd=getData(u);
             if(search!=null && !pd.originalName.startsWith(search)) continue;
-            b.append(i).append(" | ").append(pd.originalName).append(" | ").append(pd.rank.name());
+            if(!all) b.append("[yellow]");
+            b.append(i);
+            if(!all) b.append("[]");
+            b.append(" | ");
+            if(!all) b.append("[gray]");
+            b.append(pd.originalName);
+            if(!all) b.append("[]");
+            b.append(" | ");
+            b.append(all ? pd.trueRank.name():pd.rank.getRankAnyway());
             if(all) b.append(" | ").append(u);
             b.append("\n");
             i++;
