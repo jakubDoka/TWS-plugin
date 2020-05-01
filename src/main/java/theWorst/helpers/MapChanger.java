@@ -133,7 +133,7 @@ public class MapChanger implements Votable {
         if(state.wave>md.waveRecord) md.waveRecord=state.wave;
         for(Player p:playerGroup){
             if(!md.ratings.containsKey(p.uuid)){
-               rate(player,5);
+               rate(p,5);
             }
         }
         currentMap=null;

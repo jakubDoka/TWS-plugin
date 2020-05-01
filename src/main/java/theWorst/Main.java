@@ -51,7 +51,7 @@ public class Main extends Plugin {
     public static final String configFile ="settings.json";
     public static final String saveFile = "save.json";
     public static final String directory = "config/mods/The_Worst/";
-    public static final String prefix = "[gray][scarlet][Server][]";
+    public static final String prefix = "[scarlet][Server][]";
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
     public static ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
