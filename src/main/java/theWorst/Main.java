@@ -33,6 +33,8 @@ import theWorst.helpers.Tester;
 import theWorst.helpers.WaveSkipper;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
+import theWorst.interfaces.runLoad;
+import theWorst.interfaces.runSave;
 import theWorst.requests.Factory;
 import theWorst.requests.Loadout;
 import theWorst.requests.Request;
@@ -92,9 +94,9 @@ public class Main extends Plugin {
         Events.on(BlockBuildEndEvent.class, e->{
             if(e.player == null) return;
             if(e.tile.block().buildCost/60<1) return;
-
             dataBase.updateStats(e.player,e.breaking ? Stat.buildingsBroken:Stat.buildingsBuilt);
         });
+
         Events.on(BuildSelectEvent.class, e->{
             if(e.builder instanceof Player){
                 boolean happen =false;
@@ -122,7 +124,7 @@ public class Main extends Plugin {
                 if(happen)
                     Events.fire(new BlockBuildEndEvent(e.tile,player,e.team,e.breaking));
             }
-                });
+        });
 
         Events.on(EventType.UnitDestroyEvent.class, e->{
             if(e.unit instanceof Player){
@@ -205,10 +207,40 @@ public class Main extends Plugin {
             load();
             config();
             tester.loadQuestions();
+            dataBase.loadRanks();
             autoSave(defaultAutoSaveFrequency);
             updateHud();
         });
 
+    }
+
+    public static void loadJson(String filename, runLoad load, Runnable save){
+        try (FileReader fileReader = new FileReader(filename)) {
+            JSONParser jsonParser = new JSONParser();
+            Object obj = jsonParser.parse(fileReader);
+            JSONObject saveData = (JSONObject) obj;
+            load.run(saveData);
+            fileReader.close();
+            Log.info("Data from "+filename+" loaded.");
+        } catch (FileNotFoundException ex) {
+            Log.info("No "+filename+" found.Default one wos created.");
+            save.run();
+        } catch (ParseException ex) {
+            Log.info("Json file "+filename+" is invalid.");
+        } catch (IOException ex) {
+            Log.info("Error when loading data from " + filename + ".");
+        }
+    }
+
+    public static void saveJson(String filename,String success, runSave save){
+
+        try (FileWriter file = new FileWriter(filename)) {
+            file.write(save.run().toJSONString());
+            file.close();
+            Log.info(success==null ? "Default "+ filename+ " created" : success);
+        } catch (IOException ex) {
+            Log.info("Error when creating/updating "+filename+".");
+        }
     }
 
     private void addToGroups(){
@@ -256,86 +288,58 @@ public class Main extends Plugin {
 
     public void load() {
         String path = directory + saveFile;
-        try (FileReader fileReader = new FileReader(path)) {
-            JSONParser jsonParser = new JSONParser();
-            Object obj = jsonParser.parse(fileReader);
-            JSONObject saveData = (JSONObject) obj;
+        loadJson(path,(data)->{
             for (String r : loadSave.keys()) {
-                if (!saveData.containsKey(r)) {
+                if (!data.containsKey(r)) {
                     Log.info("Failed to load save file.");
                     return;
                 }
             }
-            loadSave.keys().forEach((k) -> loadSave.get(k).load((JSONObject) saveData.get(k)));
-            fileReader.close();
-            Log.info("Data loaded.");
-        } catch (FileNotFoundException ex) {
-            Log.info("No saves found.New save file " + path + " will be created.");
-            save();
-        } catch (ParseException ex) {
-            Log.info("Json file "+path+" is invalid.");
-        } catch (IOException ex) {
-            Log.info("Error when loading data from " + path + ".");
-        }
+            loadSave.keys().forEach((k) -> loadSave.get(k).load((JSONObject) data.get(k)));
+        },this::save);
         dataBase.load();
     }
 
     public void save() {
-        JSONObject saveData = new JSONObject();
-        loadSave.keys().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
-        try (FileWriter file = new FileWriter(directory + saveFile)) {
-            file.write(saveData.toJSONString());
-            file.close();
-            Log.info("Data saved.");
-        } catch (IOException ex) {
-            Log.info("Error when saving data.");
-        }
+        saveJson(directory+saveFile,"Save updated.",()->{
+            JSONObject saveData = new JSONObject();
+            loadSave.keys().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
+            return saveData;
+        });
         dataBase.save();
     }
 
     public void config(){
         String path = directory + configFile;
-        try (FileReader fileReader = new FileReader(path)) {
-            JSONParser jsonParser = new JSONParser();
-            Object obj = jsonParser.parse(fileReader);
-            JSONObject saveData = (JSONObject) obj;
-            JSONObject data =(JSONObject)saveData.get("loadout");
-            for(Object o:data.keySet()){
-                loadout.getConfig().put((String)o,getInt(data.get(o)));
+        loadJson(path,(data)->{
+            JSONObject content=(JSONObject)data.get("loadout");
+            for(Object o:content.keySet()){
+                loadout.getConfig().put((String)o,getInt(content.get(o)));
             }
-            data =(JSONObject)saveData.get("factory");
-            for(Object o:data.keySet()){
-                factory.getConfig().put((String)o,getInt(data.get(o)));
+            content=(JSONObject)data.get("factory");
+            for(Object o:content.keySet()){
+                factory.getConfig().put((String)o,getInt(content.get(o)));
             }
-            transportTime=getInt(saveData.get("transTime"));
-        }catch (FileNotFoundException ex) {
-            Log.info("No settings found.New save file " + path + " will be created.");
-            createDefaultConfig();
-        } catch (ParseException ex) {
-            Log.info("Json file "+path+" is invalid.");
-        } catch (IOException ex) {
-            Log.info("Error when loading settings from " + path + ".");
-        }
+            transportTime=getInt(data.get("transTime"));
+        },this::createDefaultConfig);
     }
 
     private void createDefaultConfig() {
-        JSONObject configData = new JSONObject();
-        JSONObject load = new JSONObject();
-        for(String o:loadout.getConfig().keys()){
-            load.put(o,getInt(loadout.getConfig().get(o)));
-        }
-        configData.put("loadout",load);
-        load =new JSONObject();
-        for(String o:factory.getConfig().keys()){
-           load.put(o,getInt(factory.getConfig().get(o)));
-        }
-        configData.put("factory",load);
-        configData.put("transTime",180);
-        try (FileWriter file = new FileWriter(directory + configFile)) {
-            file.write(configData.toJSONString());
-        } catch (IOException ex) {
-            Log.info("Error when creating settings.");
-        }
+        saveJson(directory+configFile,null,()->{
+            JSONObject saveData = new JSONObject();
+            JSONObject load = new JSONObject();
+            for(String o:loadout.getConfig().keys()){
+                load.put(o,getInt(loadout.getConfig().get(o)));
+            }
+            saveData.put("loadout",load);
+            load =new JSONObject();
+            for(String o:factory.getConfig().keys()){
+                load.put(o,getInt(factory.getConfig().get(o)));
+            }
+            saveData.put("factory",load);
+            saveData.put("transTime",180);
+            return saveData;
+        });
     }
 
     private void autoSave(int interval){
@@ -561,12 +565,31 @@ public class Main extends Plugin {
             }
         });
 
-        handler.register("w-apply-config", "Applies the factory configuration,settings and " +
+        handler.register("w-apply-config","[factory/test/general/ranks]", "Applies the factory configuration,settings and " +
                 "loads test quescions.", arg -> {
-            factory.config();
-            config();
-            tester.loadQuestions();
-            Log.info("Config applied.");
+            if(arg.length==0){
+                factory.config();
+                config();
+                tester.loadQuestions();
+                dataBase.loadRanks();
+                return;
+            }
+            switch (arg[0]){
+                case "factory":
+                    factory.config();
+                    break;
+                case "tast":
+                    tester.loadQuestions();
+                    break;
+                case "general":
+                    config();
+                    break;
+                case "ranks":
+                    dataBase.loadRanks();
+                    break;
+                default:
+                    Log.info("Invalid argument.");
+            }
         });
 
         handler.register("w-trans-time", "[value]", "Sets transport time.", arg -> {

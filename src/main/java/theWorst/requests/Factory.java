@@ -309,55 +309,45 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     }
 
     public void config() {
-        String path = Main.directory + configFile;
-        try (FileReader fileReader = new FileReader(path)) {
-            stats.clear();
-            JSONParser jsonParser = new JSONParser();
-            JSONObject settings = (JSONObject) jsonParser.parse(fileReader);
-            for (Object setting : settings.keySet()) {
-                if (getUnitByName((String) setting) == null) {
-                    Log.info("Unit name " + setting + " is invalid.It will be ignored.");
-                    StringBuilder list = new StringBuilder();
-                    for (UnitType unit : content.units()) {
-                        list.append(unit.name).append(" ");
-                    }
-                    Log.info("Valid units: " + list.toString());
-                    continue;
-                }
-                int[] data = new int[14];
-                int idx = 0;
-                boolean fail = false;
-                JSONObject jsInfo = (JSONObject) settings.get(setting);
-                for (String key : statKeys) {
+        Main.loadJson(Main.directory+configFile,
+                (settings)->{
+                    for (Object setting : settings.keySet()) {
+                        if (getUnitByName((String) setting) == null) {
+                            Log.info("Unit name " + setting + " is invalid.It will be ignored.");
+                            StringBuilder list = new StringBuilder();
+                            for (UnitType unit : content.units()) {
+                                list.append(unit.name).append(" ");
+                            }
+                            Log.info("Valid units: " + list.toString());
+                            continue;
+                        }
+                        int[] data = new int[14];
+                        int idx = 0;
+                        boolean fail = false;
+                        JSONObject jsInfo = (JSONObject) settings.get(setting);
+                        for (String key : statKeys) {
 
-                    if (!jsInfo.containsKey(key)) {
-                        Log.info("Config loading:missing property " + key + " in " + setting + ". " + setting + " will be ignored.");
-                        fail = true;
-                        break;
+                            if (!jsInfo.containsKey(key)) {
+                                Log.info("Config loading:missing property " + key + " in " + setting + ". " + setting + " will be ignored.");
+                                fail = true;
+                                break;
+                            }
+                            Integer val = Main.getInt(jsInfo.get(key));
+                            if (val == null) {
+                                Main.loadingError("Loadout/save/" + key);
+                                data[idx] = 1;
+                            } else {
+                                data[idx] = val;
+                            }
+                            idx++;
+                        }
+                        if (fail) {
+                            continue;
+                        }
+                        stats.put((String) setting, data);
                     }
-                    Integer val = Main.getInt(jsInfo.get(key));
-                    if (val == null) {
-                        Main.loadingError("Loadout/save/" + key);
-                        data[idx] = 1;
-                    } else {
-                        data[idx] = val;
-                    }
-                    idx++;
-                }
-                if (fail) {
-                    continue;
-                }
-                stats.put((String) setting, data);
-            }
-            Log.info(stats.size == 0 ? "Nothing to load from config file." : "Config loaded.");
-        } catch (FileNotFoundException ex) {
-            Log.info("No config file found.");
-            createDefaultConfig();
-        } catch (ParseException ex) {
-            Log.info("Json file is invalid");
-        } catch (IOException ex) {
-            Log.info("Error when loading data from " + path + ".");
-        }
+
+                },this::createDefaultConfig);
     }
 
     public void createDefaultConfig() {

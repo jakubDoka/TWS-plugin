@@ -6,17 +6,12 @@ import arc.util.Log;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
 import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import theWorst.AntiGriefer;
 import theWorst.Main;
 import theWorst.dataBase.DataBase;
 import theWorst.dataBase.Perm;
 import theWorst.dataBase.Rank;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -26,12 +21,7 @@ public class Tester {
     ArrayMap<String,int[]> tested=new ArrayMap<>();
 
     public void loadQuestions(){
-        String path= Main.directory+testFile;
-        try (FileReader fileReader = new FileReader(path)) {
-            questions.clear();
-            JSONParser jsonParser = new JSONParser();
-            Object obj = jsonParser.parse(fileReader);
-            JSONObject test = (JSONObject) obj;
+        Main.loadJson(Main.directory+testFile,(test)->{
             for(Object o:test.keySet()){
                 JSONArray options=(JSONArray) test.get(o);
                 Array<String> opt=new Array<>();
@@ -40,16 +30,7 @@ public class Tester {
                 }
                 questions.put((String)o,opt);
             }
-            fileReader.close();
-            Log.info("Test loaded.");
-        } catch (FileNotFoundException ex) {
-            Log.info("No test found.New example test file " + path + " will be created.");
-            createExample();
-        } catch (ParseException ex) {
-            Log.info("Json file "+path+" is invalid.");
-        } catch (IOException ex) {
-            Log.info("Error when loading test from " + path + ".");
-        }
+        },this::createExample);
     }
 
     private void createExample() {
@@ -68,10 +49,9 @@ public class Tester {
                         "\"#3)right option\"" +
                         "]" +
                         "}");
-                file.close();
-                Log.info("Data saved.");
+                Log.info("Example "+Main.directory + testFile+" created.");
             } catch (IOException ex) {
-                Log.info("Error when saving data.");
+                Log.info("Error when creating example test.");
             }
     }
 

@@ -5,6 +5,9 @@ import arc.util.Log;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import mindustry.net.Administration;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import theWorst.Main;
 import java.io.*;
 import java.util.HashMap;
@@ -15,6 +18,7 @@ import static mindustry.Vars.playerGroup;
 public class DataBase {
     static HashMap<String,PlayerData> data=new HashMap<>();
     final String saveFile= Main.directory+"database.ser";
+    final String rankFile= Main.directory+"rankConfig.json";
 
 
 
@@ -229,4 +233,63 @@ public class DataBase {
         return b.toString();
     }
 
+    public void loadRanks(){
+        Main.loadJson(rankFile,(data)->{
+            for(Object o:data.keySet()){
+                String key=(String)o;
+                try{
+                    Rank rank=Rank.valueOf(key);
+                    JSONObject settings=(JSONObject) data.get(key);
+                    if (settings.containsKey(stb.isAdmin)) rank.isAdmin=(boolean)settings.get(stb.isAdmin);
+                    if (settings.containsKey(stb.displayed)) rank.displayed=(boolean)settings.get(stb.displayed);
+                    if (settings.containsKey(stb.permanent)) rank.permanent=(boolean)settings.get(stb.permanent);
+                    if (settings.containsKey(stb.required)) rank.required=Main.getInt(settings.get(stb.required));
+                    if (settings.containsKey(stb.frequency)) rank.frequency=Main.getInt(settings.get(stb.frequency));
+                    if (settings.containsKey(stb.description)) rank.description=(String)settings.get(stb.description);
+                    if (settings.containsKey(stb.permission)){
+                        String perm=(String)settings.get(stb.permission);
+                        try{
+                            rank.permission=Perm.valueOf(perm);
+                        }catch (IllegalArgumentException ex){
+                            Log.info("Rank "+perm+"Does not exist.It will be ignored.");
+                        }
+                    }
+                    rank.isAdmin=(boolean)settings.get("isAdmin");
+                } catch (IllegalArgumentException ex){
+                    Log.info("Rank "+key+"Does not exist.It will be ignored.");
+                }
+
+            }
+        },this::createDefaultRankConfig);
+    }
+
+    private void createDefaultRankConfig() {
+        Main.saveJson(rankFile,
+                "Default "+rankFile+" created.Edit it adn the use apply config Command",
+                ()->{
+            JSONObject data=new JSONObject();
+            for(Rank r:Rank.values()){
+                JSONObject settings=new JSONObject();
+                settings.put(stb.isAdmin,r.isAdmin);
+                settings.put(stb.displayed,r.displayed);
+                settings.put(stb.permanent,r.permanent);
+                settings.put(stb.required,r.required);
+                settings.put(stb.frequency,r.frequency);
+                settings.put(stb.description,r.description);
+                settings.put(stb.permission, r.permission.name());
+                data.put(r.name(),settings);
+            }
+            return data;
+                });
+    }
+
+    enum stb{
+        isAdmin,
+        displayed,
+        required,
+        frequency,
+        permanent,
+        description,
+        permission
+    }
 }

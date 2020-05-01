@@ -1,6 +1,5 @@
 package theWorst;
 
-import arc.struct.ArrayMap;
 import arc.util.Log;
 import arc.util.Strings;
 import arc.util.Timer;
@@ -62,25 +61,25 @@ public class AntiGriefer implements Votable, Interruptible {
     public static boolean verifyTarget(Player target,Player player,String matter){
         if(DataBase.hasPerm(target, Perm.higher.getValue())){
             player.sendMessage(Main.prefix+"You cannot kick " + DataBase.getTrueRank(player).getRankAnyway() + ".");
-            return false;
+            return true;
         }
         if(target.isAdmin){
             player.sendMessage(Main.prefix+"Did you really expect to be able to "+matter+" an admin?");
-            return false;
+            return true;
         }
         if(target.isLocal){
             player.sendMessage(Main.prefix+"Local players cannot be "+matter+"ed.");
-            return false;
+            return true;
         }
         if(target==player){
             player.sendMessage(Main.prefix+"You cannot "+matter+" your self.");
-            return false;
+            return true;
         }
         if(isGriefer(player)){
             abuse(player);
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     @Override
@@ -100,7 +99,7 @@ public class AntiGriefer implements Votable, Interruptible {
             }
         }
 
-        if(!verifyTarget(target,player,"mark")) return null;
+        if(verifyTarget(target, player, "mark")) return null;
 
         Package p=new Package(isGriefer(target) ? "remove":"add",target,player);
         if(player.isAdmin){
