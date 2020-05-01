@@ -27,6 +27,7 @@ import static mindustry.Vars.*;
 
 public class MapChanger implements Votable {
     final String saveFile=Main.directory+"mapData.ser";
+    public int waves=0;
     int pageSize=15;
     public Map currentMap=maps.all().first();
     HashMap<String,mapData> data=new HashMap<>();
@@ -91,11 +92,13 @@ public class MapChanger implements Votable {
         Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
         int pageCount=(int)Math.ceil(maps.size/(float)pageSize);
         page= Mathf.clamp(page,1,pageCount);
-
         StringBuilder b=new StringBuilder();
         b.append("[orange]--MAPS(").append(page).append("/").append(pageCount).append(")--[]\n\n");
         for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
-            b.append("[yellow]").append(i).append(".[]").append(maps.get(i).name()).append("\n");
+            String m=maps.get(i).name();
+            float r=data.get(m).getRating();
+            b.append("[yellow]").append(i).append("[] | [gray]").append(m).append("[] | ");
+            b.append(String.format("[%s]%f/10",r<3 ? r<6 ? "scarlet":"yellow":"green",r));
         }
         return b.toString();
     }
@@ -129,14 +132,11 @@ public class MapChanger implements Votable {
         mapData md=data.get(currentMap.name());
         md.playtime+=Time.timeSinceMillis(md.started);
         md.timesPlayed++;
+
         if(won) md.timesWon++;
-        if(state.wave>md.waveRecord) md.waveRecord=state.wave;
-        for(Player p:playerGroup){
-            if(!md.ratings.containsKey(p.uuid)){
-               rate(p,5);
-            }
-        }
+        if(waves>md.waveRecord) md.waveRecord=waves;
         currentMap=null;
+        waves=0;
     }
 
     public void rate(Player player,int rating){

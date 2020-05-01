@@ -96,6 +96,10 @@ public class Main extends Plugin {
             changer.endGame(e.winner==Team.sharded);
         });
 
+        Events.on(WaveEvent.class,e->{
+           changer.waves++;
+        });
+
         Events.on(PlayEvent.class, e->{
             changer.startGame();
         });
@@ -921,6 +925,19 @@ public class Main extends Plugin {
                 return;
             }
             DataBase.updateName(p);
+        });
+        handler.<Player>register("dm","<player> <text...>", "Send direct message to player.", (arg,player) -> {
+            StringBuilder b=new StringBuilder();
+            for(String s:arg){
+                b.append(s).append(" ");
+            }
+            Player other=findPlayer(arg[0]);
+            if(other==null){
+                player.sendMessage(prefix+"Player not found.");
+                return;
+            }
+            player.sendMessage(prefix+"Message arrived.");
+            other.sendMessage("[blue][DM from "+player.name+"][]:"+b.toString().replace(arg[0],""));
         });
     }
 }
