@@ -168,6 +168,6 @@ public class Vote implements Interruptible {
     @Override
     public String getHudInfo() {
         if(!voting) return null;
-        return "vote for "+message+" "+String.format("%02d",time)+"s [green]"+yes+" [scarlet]"+no;
+        return "vote for "+message+" "+String.format("%02d",time)+"s [green]"+yes+" [][scarlet]"+no+"[]";
     }
 }

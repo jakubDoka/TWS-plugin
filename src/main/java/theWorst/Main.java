@@ -96,10 +96,6 @@ public class Main extends Plugin {
             changer.endGame(e.winner==Team.sharded);
         });
 
-        Events.on(WaveEvent.class,e->{
-           changer.waves++;
-        });
-
         Events.on(PlayEvent.class, e->{
             changer.startGame();
         });
@@ -219,6 +215,7 @@ public class Main extends Plugin {
             load_items();
             factory = new Factory(loadout);
             changer = new MapChanger();
+            changer.cleanup();
             addToGroups();
             if (!makeDir()) {
                 Log.info("Unable to create directory " + directory + ".");
@@ -597,6 +594,13 @@ public class Main extends Plugin {
             }
         });
 
+        handler.register("w-map-stats","Shows all maps with statistics.",arg-> Log.info(changer.statistics()));
+
+        handler.register("w-map-cleanup","Removes data about already removed maps.",arg->{
+            changer.cleanup();
+            Log.info("Data removed");
+        });
+
         handler.register("w-apply-config","[factory/test/general/ranks]", "Applies the factory configuration,settings and " +
                 "loads test quescions.", arg -> {
             if(arg.length==0){
@@ -690,18 +694,19 @@ public class Main extends Plugin {
             antiGriefer.switchEmergency(arg.length==1);
         });
 
-        handler.<Player>register("maps","[page/rate/info] [mapName/mapIdx/1-10]","Displays list maps,rates current map or " +
+        handler.<Player>register("maps","[page/rate/info/rules] [mapName/mapIdx/1-10]","Displays list maps,rates current map or " +
                         "display information about current or chosen map.",
                 (arg, player) -> {
             Integer page;
             if(arg.length>0){
-                if(arg[0].equals("info")){
-                    String stats=changer.getMapStats(arg.length==2 ? arg[1]:null);
+                if(arg[0].equals("info") || arg[0].equals("rules")){
+                    String stats=arg[0].equals("rules") ? changer.getMapRules(arg.length==2 ? arg[1]:null):
+                            changer.getMapStats(arg.length==2 ? arg[1]:null);
                     if(stats==null){
                         player.sendMessage(prefix+"Map not found.");
                         return;
                     }
-                    Call.onInfoMessage(player.con,"[orange]--MAP STATS--[]\n\n"+stats);
+                    Call.onInfoMessage(player.con,stats);
                     return;
                 }
                 if(arg[0].equals("rate")){

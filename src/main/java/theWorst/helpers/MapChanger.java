@@ -8,6 +8,7 @@ import mindustry.Vars;
 import mindustry.entities.type.Player;
 import mindustry.game.EventType;
 import mindustry.game.Gamemode;
+import mindustry.game.Rules;
 import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.maps.Map;
@@ -27,7 +28,6 @@ import static mindustry.Vars.*;
 
 public class MapChanger implements Votable {
     final String saveFile=Main.directory+"mapData.ser";
-    public int waves=0;
     int pageSize=15;
     public Map currentMap=maps.all().first();
     HashMap<String,mapData> data=new HashMap<>();
@@ -88,6 +88,31 @@ public class MapChanger implements Votable {
         return null;
     }
 
+    public String statistics(){
+        Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
+        StringBuilder b=new StringBuilder().append("\n");
+        int i=0;
+        double bestRatio=0;
+        for (Map m:maps){
+            if(!data.containsKey(m.name())) continue;
+            double r=data.get(m.name()).getPlayRatio();
+            if (r>bestRatio) bestRatio=r;
+        }
+        for (Map m:maps){
+            String nm=m.name();
+            if(!data.containsKey(m.name())) continue;
+            int r=(int)data.get(nm).getRating();
+            int ra=(int)(data.get(nm).getPlayRatio()/bestRatio*10);
+            b.append(i).append(" | ").append(nm).append(" | ");
+            b.append(String.format("%d/10",r)).append(" | ");
+            b.append("<").append(new String(new char[ra]).replace("\0", "="));
+            b.append(new String(new char[10-ra]).replace("\0", "-")).append(">");
+            b.append("\n");
+            i++;
+        }
+        return b.toString();
+    }
+
     public String info(int page) {
         Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
         int pageCount=(int)Math.ceil(maps.size/(float)pageSize);
@@ -96,23 +121,52 @@ public class MapChanger implements Votable {
         b.append("[orange]--MAPS(").append(page).append("/").append(pageCount).append(")--[]\n\n");
         for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
             String m=maps.get(i).name();
-            float r=data.get(m).getRating();
+            int r=(int)data.get(m).getRating();
             b.append("[yellow]").append(i).append("[] | [gray]").append(m).append("[] | ");
-            b.append(String.format("[%s]%f/10",r<3 ? r<6 ? "scarlet":"yellow":"green",r));
+            b.append(String.format("[%s]%d/10[]",r<6 ? r<3 ? "scarlet":"yellow":"green",r));
+            b.append("\n");
         }
         return b.toString();
     }
 
     public String getMapStats(String identifier){
-        if (identifier==null) return data.get(world.getMap().name()).toString();
-        Map map=findMap(identifier);
+        Map map= identifier==null ? world.getMap():findMap(identifier);
         if(map==null){
             return null;
         }
         if(!data.containsKey(map.name())) {
             return "[gray]No info about this map yet.";
         }
-        return data.get(map.name()).toString();
+        return "[orange]--MAP STATS--[]\n\n"+data.get(map.name()).toString();
+    }
+
+    public String getMapRules(String identifier){
+        Map map= identifier==null ? world.getMap():findMap(identifier);
+        if(map==null){
+            return null;
+        }
+        Rules rules=map.rules();
+        return "[orange]--MAP RULES--[]\n\n"+
+                String.format("[gray]name:[] %s\n" +
+                        "[gray]mode:[] %s\n" +
+                        "[orange]Multipliers[]\n" +
+                        "[gray]build cost:[] %.2f\n"+
+                        "[gray]build speed:[] %.2f\n"+
+                        "[gray]block health:[] %.2f\n"+
+                        "[gray]unit build speed:[] %.2f\n"+
+                        "[gray]unit damage:[] %.2f\n"+
+                        "[gray]unit health:[] %.2f\n"+
+                        "[gray]player damage:[] %.2f\n"+
+                        "[gray]player health:[] %.2f\n"+
+                "",map.name(),rules.mode().name(),
+                rules.buildCostMultiplier,
+                rules.buildSpeedMultiplier,
+                rules.blockHealthMultiplier,
+                rules.unitBuildSpeedMultiplier,
+                rules.unitDamageMultiplier,
+                rules.unitHealthMultiplier,
+                rules.playerDamageMultiplier,
+                rules.playerHealthMultiplier);
     }
 
     public void startGame() {
@@ -132,17 +186,23 @@ public class MapChanger implements Votable {
         mapData md=data.get(currentMap.name());
         md.playtime+=Time.timeSinceMillis(md.started);
         md.timesPlayed++;
-
         if(won) md.timesWon++;
-        if(waves>md.waveRecord) md.waveRecord=waves;
+        if(state.wave>md.waveRecord) md.waveRecord=state.wave;
         currentMap=null;
-        waves=0;
     }
 
     public void rate(Player player,int rating){
         mapData md=data.get(world.getMap().name());
         md.ratings.put(player.uuid,(byte)rating);
         player.sendMessage(String.format(Main.prefix+"You gave [orange]%d/10[] to map [orange]%s[].",rating,world.getMap().name()));
+    }
+
+    public void cleanup() {
+        for(String md:data.keySet()){
+            if(maps.byName(md)==null){
+                data.remove(md);
+            }
+        }
     }
 
     static class mapData implements Serializable {
@@ -160,20 +220,23 @@ public class MapChanger implements Votable {
             name=map.name();
         };
 
-        long getPlayRatio(){
-            return playtime/Time.timeSinceMillis(bornDate);
+        double getPlayRatio(){
+            return playtime/(double)Time.timeSinceMillis(bornDate);
         }
 
         public String toString(){
-            return "[gray]times played:[] " + timesPlayed + "\n" +
+            return "[gray]name:[] " + name + "\n" +
+                    "[gray]author:[] " + maps.byName(name).author() + "\n" +
+                    "[gray]times played:[] " + timesPlayed + "\n" +
                     "[gray]times won:[] " + timesWon + "\n" +
-                    "[gray]wave record:[] " + timesWon + "\n" +
+                    "[gray]wave record:[] " + waveRecord + "\n" +
                     "[gray]server age:[] " + Main.milsToTime(Time.timeSinceMillis(bornDate)) + "\n" +
                     "[gray]total play time:[] " + Main.milsToTime(playtime) + "\n" +
                     "[gray]rating:[] " + getRating() + "/10";
         }
 
         public float getRating(){
+            if (ratings.size()==0) return 0;
             float total=0;
             for(byte b:ratings.values()){
                 total+=b;
