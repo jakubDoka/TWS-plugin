@@ -121,7 +121,8 @@ public class MapChanger implements Votable {
         b.append("[orange]--MAPS(").append(page).append("/").append(pageCount).append(")--[]\n\n");
         for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
             String m=maps.get(i).name();
-            int r=(int)data.get(m).getRating();
+            mapData md=data.get(m);
+            int r= md==null ? 5:(int)md.getRating();
             b.append("[yellow]").append(i).append("[] | [gray]").append(m).append("[] | ");
             b.append(String.format("[%s]%d/10[]",r<6 ? r<3 ? "scarlet":"yellow":"green",r));
             b.append("\n");
