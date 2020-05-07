@@ -222,7 +222,7 @@ public class MapChanger implements Votable {
         };
 
         double getPlayRatio(){
-            return playtime/(double)Time.timeSinceMillis(bornDate);
+            return (playtime-timesPlayed*1000*60*5)/(double)Time.timeSinceMillis(bornDate);
         }
 
         public String toString(){

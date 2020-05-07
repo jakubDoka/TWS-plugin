@@ -941,8 +941,8 @@ public class Main extends Plugin {
                 player.sendMessage(prefix+"Player not found.");
                 return;
             }
-            player.sendMessage(prefix+"Message arrived.");
-            other.sendMessage("[blue][DM from "+player.name+"][]:"+b.toString().replace(arg[0],""));
+            player.sendMessage("[#ffdfba][DM to "+other.name+"][]:"+b.toString().replace(arg[0],""));
+            other.sendMessage("[#ffdfba][DM from "+player.name+"][]:"+b.toString().replace(arg[0],""));
         });
     }
 }
