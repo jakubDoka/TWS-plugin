@@ -22,6 +22,7 @@ import mindustry.type.ItemType;
 
 import java.awt.*;
 import java.io.*;
+import java.security.InvalidParameterException;
 import java.util.Arrays;
 
 import mindustry.type.UnitType;
@@ -51,7 +52,7 @@ public class Main extends Plugin {
     public static final String configFile ="settings.json";
     public static final String saveFile = "save.json";
     public static final String directory = "config/mods/The_Worst/";
-    public static final String prefix = "[scarlet][Server][]";
+    public static final String prefix = "[coral][[[scarlet]Server[]]:[]";
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
     public static ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
@@ -102,7 +103,7 @@ public class Main extends Plugin {
 
         Events.on(BlockBuildEndEvent.class, e->{
             if(e.player == null) return;
-            if(e.tile.block().buildCost/60<1) return;
+            if(!e.breaking && e.tile.block().buildCost/60<1) return;
             dataBase.updateStats(e.player,e.breaking ? Stat.buildingsBroken:Stat.buildingsBuilt);
         });
 
@@ -191,12 +192,17 @@ public class Main extends Plugin {
         Events.on(ServerLoadEvent.class, e -> {
             netServer.admins.addActionFilter(action -> {
                 Player player = action.player;
+
                 if (player == null) return true;
+
+                DataBase.getData(player).lastAction=Time.millis();
+                Log.info(player.name+" action");
 
                 if (player.isAdmin) return true;
 
                 return antiGriefer.canBuild(player);
             });
+
             netServer.admins.addChatFilter((player,message)->{
                 if((message.equals("y") || message.equals("n")) && vote.voting){
                     return null;
@@ -206,10 +212,10 @@ public class Main extends Plugin {
                         AntiGriefer.abuse(player);
                         return null;
                     }
-
+                    return "[pink]"+message;
                 }
                 DataBase.getData(player).lastMessage=Time.millis();
-                return message;
+                return "["+DataBase.getData(player).textColor+"]"+message;
             });
 
             load_items();
@@ -292,7 +298,7 @@ public class Main extends Plugin {
                     b.append(hudMessage).append("\n");
                 }
                 for (Player p : playerGroup.all()) {
-                    if (DataBase.getData(p).hudEnabled) {
+                    if (DataBase.hasEnabled(p,Setting.hud)) {
                         Call.setHudText(p.con, b.toString().substring(0, b.length() - 1));
                     } else {
                         Call.setHudText(p.con, "");
@@ -845,8 +851,28 @@ public class Main extends Plugin {
             Timer.schedule(()->Call.sendMessage(prefix+"F..."),5);
         });
 
-        handler.<Player>register("hud","<on/off>","Enable or disable hud information."
-                ,(arg, player) -> DataBase.getData(player).hudEnabled=arg[0].equals("on"));
+        handler.<Player>register("set","[settingName/textColor] [on/off/color]","Set your message color or " +
+                        "enable/disable any setting.Write just /set for setting list.",(arg, player) ->{
+            if(arg.length==0) {
+                player.sendMessage(prefix+"Options:"+ Arrays.toString(Setting.values()));
+                return;
+            }
+            if(notEnoughArgs(player,2,arg)) return;
+
+            if(arg[0].equals("textColor")){
+                DataBase.getData(player).textColor=arg[1];
+                player.sendMessage(prefix+"["+arg[1]+"]if you see your color in brackets it probably isn t " +
+                        "valid or recognized.");
+                return;
+            }
+            try {
+                Setting s=Setting.valueOf(arg[0]);
+                DataBase.switchSetting(player,s,arg[1].equals("off"));
+                player.sendMessage(prefix+"You toggled the [orange]"+s.name()+"[] "+arg[1]+".");
+            } catch (IllegalArgumentException ex){
+                player.sendMessage(prefix+"Non existent setting. Use /set to see options.");
+            }
+                });
 
         handler.<Player>register("info","[name/ID/list] [page]","Displays info about you or another player.",
                 (arg,player)-> {

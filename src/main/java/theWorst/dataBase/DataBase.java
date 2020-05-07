@@ -1,5 +1,6 @@
 package theWorst.dataBase;
 
+import arc.Settings;
 import arc.math.Mathf;
 import arc.util.Log;
 import mindustry.entities.type.Player;
@@ -11,6 +12,7 @@ import org.json.simple.parser.ParseException;
 import theWorst.Main;
 import java.io.*;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import static mindustry.Vars.netServer;
 import static mindustry.Vars.playerGroup;
@@ -56,6 +58,20 @@ public class DataBase {
 
     public static void restartRank(Player player) {
         setRank(player,Rank.newcomer);
+    }
+
+    public static boolean hasEnabled(Player player, Setting setting){
+        return getData(player).settings.contains(setting.name());
+    }
+
+    public static void switchSetting(Player player,Setting setting,boolean off){
+        HashSet<String > settings=getData(player).settings;
+        boolean contain=settings.contains(setting.name());
+        if(off && contain){
+            settings.remove(setting.name());
+        } else if(!contain){
+            settings.add(setting.name());
+        }
     }
 
     public void register(Player player){
@@ -107,17 +123,17 @@ public class DataBase {
 
     public static void updateRank(Player player){
         Rank rank=getRank(player);
-        if(!player.isAdmin && (rank==Rank.griefer || rank==Rank.newcomer)) return;
+        if(rank==Rank.griefer) return;
         for(Rank r:Rank.values()){
             if(r.getValue()>rank.getValue() && r.condition(player)){
-                Call.sendMessage("[orange]"+player.name+"[] obtained "+r.getRankAnyway()+" rank.");
+                Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] obtained "+r.getRankAnyway()+" rank.");
                 setRank(player,r);
                 return;
             }
         }
         if(!rank.permanent){
             setRank(player,getTrueRank(player));
-            Call.sendMessage("[orange]"+player.name+"[] lost his "+rank.getRankAnyway()+" rank.");
+            Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] lost his "+rank.getRankAnyway()+" rank.");
 
         }
     }

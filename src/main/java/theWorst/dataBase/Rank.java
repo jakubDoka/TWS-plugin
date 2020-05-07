@@ -4,6 +4,8 @@ import arc.graphics.Color;
 import mindustry.content.Items;
 import mindustry.entities.type.Player;
 
+import arc.util.Time;
+
 public enum Rank implements java.io.Serializable{
     griefer(Color.pink,Perm.none),
     newcomer(Items.copper.color){
@@ -93,7 +95,20 @@ public enum Rank implements java.io.Serializable{
         {
             isAdmin=true;
         }
+    },
+    AFK(Color.gray){
+        {
+            permanent=false;
+            required=1000*60*5;
+            frequency=0;
+        }
+        @Override
+        public boolean condition(Player player) {
+            PlayerData data=DataBase.getData(player);
+            return Time.timeSinceMillis(data.lastAction)>required;
+        }
     };
+
     Color color;
     Perm permission=Perm.normal;
     boolean displayed=true;
@@ -136,6 +151,7 @@ public enum Rank implements java.io.Serializable{
     }
 
     public boolean check(PlayerData pd,int value){
+        if (pd.playTime==0) return false;
         return value>required && value/(pd.playTime/(1000*60*60))>frequency;
     }
 }

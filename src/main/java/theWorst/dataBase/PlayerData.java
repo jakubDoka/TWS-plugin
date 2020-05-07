@@ -1,9 +1,13 @@
 package theWorst.dataBase;
 
+import arc.struct.ObjectMap;
 import arc.util.Time;
 import mindustry.entities.type.Player;
 import mindustry.net.Administration;
 import theWorst.Main;
+
+import java.util.HashMap;
+import java.util.HashSet;
 
 import static mindustry.Vars.*;
 
@@ -11,7 +15,7 @@ import static mindustry.Vars.*;
 public class PlayerData implements Cloneable,java.io.Serializable{
     public Rank rank = Rank.newcomer;
     public Rank trueRank = Rank.newcomer;
-    public int playTime = 0;
+    public int playTime = 1;
     public int buildingsBuilt = 0;
     public int buildingsBroken = 0;
     public int enemiesKilled = 0;
@@ -24,16 +28,17 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     public long connected = 0;
     public long lastMessage = 0;
     public long lastActive;
-    public boolean hudEnabled=true;
-    public boolean waveInfo=false;
+    public long lastAction = Time.millis();
     public boolean banned = false;
     public long bannedUntil = 0;
     public String banReason = "";
     public String originalName = "";
+    public String textColor = "white";
     public String discordLink = "";
     public String id;
 
-
+    HashSet<String> settings=new HashSet<>();
+    HashMap<String,Object> advancedSettings=new HashMap<>();
 
 
     public PlayerData(Player player){
@@ -113,3 +118,4 @@ public class PlayerData implements Cloneable,java.io.Serializable{
 
 
 }
+
