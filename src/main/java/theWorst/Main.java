@@ -5,7 +5,6 @@ import arc.math.Mathf;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
 import arc.util.*;
-import mindustry.core.World;
 import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
@@ -20,9 +19,7 @@ import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.ItemType;
 
-import java.awt.*;
 import java.io.*;
-import java.security.InvalidParameterException;
 import java.util.Arrays;
 
 import mindustry.type.UnitType;
@@ -97,9 +94,7 @@ public class Main extends Plugin {
             changer.endGame(e.winner==Team.sharded);
         });
 
-        Events.on(PlayEvent.class, e->{
-            changer.startGame();
-        });
+        Events.on(PlayEvent.class, e-> changer.startGame());
 
         Events.on(BlockBuildEndEvent.class, e->{
             if(e.player == null) return;
@@ -159,10 +154,7 @@ public class Main extends Plugin {
             }
         });
 
-        Events.on(WorldLoadEvent.class, e ->{
-            interruptibles.forEach(Interruptible::interrupt);
-
-        });
+        Events.on(WorldLoadEvent.class, e -> interruptibles.forEach(Interruptible::interrupt));
 
 
         Events.on(EventType.BuildSelectEvent.class, e -> {
@@ -194,10 +186,7 @@ public class Main extends Plugin {
                 Player player = action.player;
 
                 if (player == null) return true;
-
                 DataBase.getData(player).lastAction=Time.millis();
-                Log.info(player.name+" action");
-
                 if (player.isAdmin) return true;
 
                 return antiGriefer.canBuild(player);
