@@ -191,11 +191,13 @@ public class MapChanger implements Votable {
     }
 
     public void cleanup() {
+        Array<String> toRemove=new Array<>();
         for(String md:data.keySet()){
             if(maps.byName(md)==null){
-                data.remove(md);
+                toRemove.add(md);
             }
         }
+        toRemove.forEach(m->data.remove(m));
     }
 
     static class mapData implements Serializable {

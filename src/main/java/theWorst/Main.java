@@ -974,13 +974,14 @@ public class Main extends Plugin {
                 return;
             }
 
-            player.sendMessage(prefix+"Rank of player " + pd.originalName + " is now " + pd.rank.getRankAnyway() + ".");
+            player.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + pd.rank.getRankAnyway() + ".");
             Player p=findPlayer(args[0]);
             if(p==null){
                 return;
             }
             p.name=p.name+pd.rank.getRank();
         });
+
         handler.<Player>register("dm","<player> <text...>", "Send direct message to player.", (arg,player) -> {
             StringBuilder b=new StringBuilder();
             for(String s:arg){

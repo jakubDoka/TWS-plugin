@@ -95,7 +95,7 @@ public class PlayerData implements Cloneable,java.io.Serializable{
                 enemiesKilled*5+
                 playTime/(1000*60);
         int level=1;
-        int first=100;
+        int first=500;
         while (true){
            value-=first* Math.pow(1.1,level);
            if(value<0){
