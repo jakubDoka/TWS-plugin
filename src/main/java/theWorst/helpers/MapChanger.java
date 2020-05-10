@@ -88,46 +88,38 @@ public class MapChanger implements Votable {
         return null;
     }
 
-    public String statistics(){
+    public Array<String> statistics(){
+        Array<String> res=new Array<>();
         Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
-        StringBuilder b=new StringBuilder().append("\n");
-        int i=0;
         double bestRatio=0;
         for (Map m:maps){
             if(!data.containsKey(m.name())) continue;
             double r=data.get(m.name()).getPlayRatio();
             if (r>bestRatio) bestRatio=r;
         }
-        for (Map m:maps){
+        for (int i=0;i<maps.size;i++){
+            Map m=maps.get(i);
             String nm=m.name();
             if(!data.containsKey(m.name())) continue;
             int r=(int)data.get(nm).getRating();
             int ra=(int)(data.get(nm).getPlayRatio()/bestRatio*10);
-            b.append(i).append(" | ").append(nm).append(" | ");
-            b.append(String.format("%d/10",r)).append(" | ");
-            b.append("<").append(new String(new char[ra]).replace("\0", "="));
-            b.append(new String(new char[10-ra]).replace("\0", "-")).append(">");
-            b.append("\n");
-            i++;
+            res.add(i+" | "+nm+" | "+String.format("%d/10",r)+" | "+
+                "<"+new String(new char[ra]).replace("\0", "=")+
+                    new String(new char[10-ra]).replace("\0", "-")+">");
         }
-        return b.toString();
+        return res;
     }
 
-    public String info(int page) {
+    public Array<String>info() {
         Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
-        int pageCount=(int)Math.ceil(maps.size/(float)pageSize);
-        page= Mathf.clamp(page,1,pageCount);
-        StringBuilder b=new StringBuilder();
-        b.append("[orange]--MAPS(").append(page).append("/").append(pageCount).append(")--[]\n\n");
-        for (int i=(page-1)*pageSize;i<page*pageSize && i<maps.size;i++){
+        Array<String> res=new Array<>();
+        for (int i=0;i<maps.size;i++){
             String m=maps.get(i).name();
             mapData md=data.get(m);
             int r= md==null ? 5:(int)md.getRating();
-            b.append("[yellow]").append(i).append("[] | [gray]").append(m).append("[] | ");
-            b.append(String.format("[%s]%d/10[]",r<6 ? r<3 ? "scarlet":"yellow":"green",r));
-            b.append("\n");
+            res.add("[yellow]"+i+"[] | [gray]"+m+"[] | "+String.format("[%s]%d/10[]",r<6 ? r<3 ? "scarlet":"yellow":"green",r));
         }
-        return b.toString();
+        return res;
     }
 
     public String getMapStats(String identifier){

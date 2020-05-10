@@ -6,23 +6,52 @@ import arc.util.Timer;
 import mindustry.entities.type.Player;
 
 import mindustry.gen.Call;
-import theWorst.dataBase.DataBase;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import theWorst.dataBase.Database;
 import theWorst.dataBase.Perm;
+import theWorst.dataBase.PlayerData;
 import theWorst.dataBase.Rank;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Votable;
-
+import theWorst.interfaces.LoadSave;
+import java.util.HashSet;
 import java.util.TimerTask;
 
 import static mindustry.Vars.*;
 
-public class AntiGriefer implements Votable, Interruptible {
+public class AntiGriefer implements Votable, Interruptible,LoadSave{
     public static final String message= Main.prefix+"[pink]Okay griefer.";
 
     Emergency emergency= new Emergency();
 
+    public static HashSet<String> subNets=new HashSet<>();
+
+    public static String getSubNet(PlayerData pd){
+        String address=pd.ip;
+        return address.substring(0,address.lastIndexOf("."));
+    }
+
+    public static void bunUnBunSubNet(PlayerData pd,boolean bun){
+        String subNet=getSubNet(pd);
+        boolean contains=subNets.contains(subNet);
+        if(bun && !contains){
+            subNets.add(subNet);
+            return;
+        }
+        if(contains && !bun){
+            subNets.remove(subNet);
+        }
+    }
+
+
+
+    public static boolean isSubNetBanned(Player player){
+        return subNets.contains(getSubNet(Database.getData(player)));
+    }
+
     public static boolean isGriefer(Player player){
-        return DataBase.getRank(player)==Rank.griefer;
+        return Database.getData(player).trueRank==Rank.griefer;
     }
 
     public static void abuse(Player player){
@@ -35,7 +64,7 @@ public class AntiGriefer implements Votable, Interruptible {
             abuse(player);
             return false;
         }
-        if(isEmergency() && !DataBase.hasPerm(player, Perm.high.getValue())) {
+        if(isEmergency() && !Database.hasPerm(player, Perm.high)) {
             player.sendMessage("You don t have permission to do anything during emergency.");
             return false;
         }
@@ -47,20 +76,20 @@ public class AntiGriefer implements Votable, Interruptible {
     public void launch(Package p) {
         Player player=((Player)p.obj);
         if(p.object.equals("remove")){
-            DataBase.restartRank(player);
+            Database.setRank(player,Rank.newcomer);
             player.sendMessage(Main.prefix+"[pink]Your rank wos restarted.");
             Log.info(player+" is no longer griefer.");
             return;
         }
-        DataBase.setRank(player,Rank.griefer);
+        Database.setRank(player,Rank.griefer);
         player.sendMessage(Main.prefix+"[pink]You were marked as griefer.");
         Log.info(player+" wos marked as griefer.");
 
     }
 
     public static boolean verifyTarget(Player target,Player player,String matter){
-        if(DataBase.hasPerm(target, Perm.higher.getValue())){
-            player.sendMessage(Main.prefix+"You cannot kick " + DataBase.getTrueRank(player).getRankAnyway() + ".");
+        if(Database.hasPerm(target, Perm.higher)){
+            player.sendMessage(Main.prefix+"You cannot kick " + Database.getData(target).trueRank.getRankAnyway() + ".");
             return true;
         }
         if(target.isAdmin){
@@ -107,6 +136,22 @@ public class AntiGriefer implements Votable, Interruptible {
             return null;
         }
         return p;
+    }
+
+    @Override
+    public void load(JSONObject data) {
+        for(Object o:(JSONArray) data.get("subNets")){
+            subNets.add((String)o);
+        }
+    }
+
+    @Override
+    public JSONObject save() {
+        JSONArray subs =new JSONArray();
+        subs.addAll(subNets);
+        JSONObject data =new JSONObject();
+        data.put("subNets",subs);
+        return data;
     }
 
     static class Emergency{

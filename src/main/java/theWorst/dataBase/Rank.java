@@ -39,7 +39,7 @@ public enum Rank implements java.io.Serializable{
         }
         @Override
         public boolean condition(Player player) {
-            PlayerData data=DataBase.getData(player);
+            PlayerData data=Database.getData(player);
             return check(data,data.loadoutVotes);
         }
     },
@@ -51,7 +51,7 @@ public enum Rank implements java.io.Serializable{
         }
         @Override
         public boolean condition(Player player) {
-            PlayerData data=DataBase.getData(player);
+            PlayerData data=Database.getData(player);
             return check(data,data.factoryVotes);
         }
     },
@@ -63,7 +63,7 @@ public enum Rank implements java.io.Serializable{
         }
         @Override
         public boolean condition(Player player) {
-            PlayerData data=DataBase.getData(player);
+            PlayerData data=Database.getData(player);
             return check(data,data.deaths);
         }
     },
@@ -75,7 +75,7 @@ public enum Rank implements java.io.Serializable{
         }
         @Override
         public boolean condition(Player player) {
-            PlayerData data=DataBase.getData(player);
+            PlayerData data=Database.getData(player);
             return check(data,data.buildingsBuilt);
         }
     },
@@ -87,7 +87,7 @@ public enum Rank implements java.io.Serializable{
         }
         @Override
         public boolean condition(Player player) {
-            PlayerData data=DataBase.getData(player);
+            PlayerData data=Database.getData(player);
             return check(data,data.buildingsBroken);
         }
     },
@@ -104,7 +104,7 @@ public enum Rank implements java.io.Serializable{
         }
         @Override
         public boolean condition(Player player) {
-            PlayerData data=DataBase.getData(player);
+            PlayerData data=Database.getData(player);
             return Time.timeSinceMillis(data.lastAction)>required;
         }
     };

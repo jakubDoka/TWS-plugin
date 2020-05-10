@@ -9,8 +9,6 @@ import mindustry.type.UnitType;
 import org.json.simple.JSONObject;
 
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,11 +17,9 @@ import arc.struct.ArrayMap;
 import arc.struct.Array;
 
 import arc.util.Timer;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import theWorst.Main;
 import theWorst.Package;
-import theWorst.dataBase.DataBase;
+import theWorst.dataBase.Database;
 import theWorst.dataBase.Perm;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
@@ -106,7 +102,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
     @Override
     public void launch(Package p) {
         Request req;
-        DataBase.getData(p.target).factoryVotes++;
+        Database.getData(p.target).factoryVotes++;
         if (p.toBase) {
             int used=0,all;
             ArrayList<BaseUnit> units = new ArrayList<>();
@@ -205,7 +201,7 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             }
             p= new theWorst.Package(object, amount, true, player, x, y);
         }
-        if(DataBase.hasSpecialPerm(player, Perm.factory)){
+        if(Database.hasSpecialPerm(player, Perm.factory)){
             launch(p);
             Call.sendMessage(Main.prefix+player.name+" just used factory.");
             return null;

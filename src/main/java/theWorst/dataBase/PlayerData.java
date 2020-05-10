@@ -1,6 +1,5 @@
 package theWorst.dataBase;
 
-import arc.struct.ObjectMap;
 import arc.util.Time;
 import mindustry.entities.type.Player;
 import mindustry.net.Administration;
@@ -15,6 +14,7 @@ import static mindustry.Vars.*;
 public class PlayerData implements Cloneable,java.io.Serializable{
     public Rank rank = Rank.newcomer;
     public Rank trueRank = Rank.newcomer;
+    public int serverId;
     public int playTime = 1;
     public int buildingsBuilt = 0;
     public int buildingsBroken = 0;
@@ -35,7 +35,9 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     public String originalName = "";
     public String textColor = "white";
     public String discordLink = "";
-    public String id;
+    public String infoId;
+    public String ip;
+
 
     HashSet<String> settings=new HashSet<>();
     HashMap<String,Object> advancedSettings=new HashMap<>();
@@ -43,8 +45,8 @@ public class PlayerData implements Cloneable,java.io.Serializable{
 
     public PlayerData(Player player){
         lastActive=Time.millis();
-        id=player.getInfo().id;
-        connect(player);
+        infoId=player.getInfo().id;
+        serverId=Database.data.size();
     }
 
     public String toString(){
@@ -52,7 +54,7 @@ public class PlayerData implements Cloneable,java.io.Serializable{
         String activity=connected>lastActive ? "[green]currently active[]":
                 "[gray]inactive for []" + Main.milsToTime(Time.timeSinceMillis(lastActive));
         return "[orange]==PLayer data==[]\n\n" +
-                "[yellow]Level:[]" + getLevel() + " | [yellow]server ID:[]" + DataBase.getIndex(this) + "\n" +
+                "[yellow]Level:[]" + getLevel() + " | [yellow]server ID:[]" + serverId + "\n" +
                 "[gray]name:[] " + originalName + "\n" +
                 "[gray]rank:[] " + trueRank.getRankAnyway() + "\n" +
                 "[gray]special rank:[] " + special + "\n" +
@@ -80,7 +82,7 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     }
 
     public Administration.PlayerInfo getInfo(){
-        return netServer.admins.getInfo(id);
+        return netServer.admins.getInfo(infoId);
     }
 
     public int getLevel(){
@@ -109,6 +111,7 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     public void connect(Player player) {
         originalName=player.name;
         connected=Time.millis();
+        ip=player.con.address;
     }
 
     public void disconnect() {

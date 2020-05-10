@@ -41,8 +41,7 @@ import theWorst.requests.Loadout;
 import theWorst.requests.Request;
 import theWorst.requests.Requesting;
 
-import static java.lang.Math.pow;
-import static java.lang.Math.sqrt;
+import static java.lang.Math.*;
 import static mindustry.Vars.*;
 
 public class Main extends Plugin {
@@ -58,6 +57,7 @@ public class Main extends Plugin {
     public static int transportTime = 3 * 60;
 
     public static Array<Item> items = new Array<>();
+    public final int pageSize=15;
     Array<Interruptible> interruptibles = new Array<>();
 
     Timer.Task autoSaveThread;
@@ -73,14 +73,14 @@ public class Main extends Plugin {
     MapChanger changer;
     WaveSkipper skipper = new WaveSkipper();
 
-    DataBase dataBase=new DataBase();
+    Database dataBase=new Database();
     Tester tester =new Tester();
     AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
     VoteKick voteKick=new VoteKick();
 
     public Main() {
-        Events.on(PlayerJoin.class, e -> dataBase.register(e.player));
+        Events.on(PlayerJoin.class, e -> dataBase.onConnect(e.player));
 
         Events.on(PlayerLeave.class,e-> dataBase.onDisconnect(e.player));
 
@@ -109,14 +109,14 @@ public class Main extends Plugin {
                 CoreBlock.CoreEntity core=Loadout.getCore(player);
                 if(core==null) return;
                 BuilderTrait.BuildRequest request = player.buildRequest();
-                if(DataBase.hasSpecialPerm(player,Perm.destruct) && request.breaking){
+                if(Database.hasSpecialPerm(player,Perm.destruct) && request.breaking){
                     happen=true;
                     for(ItemStack s:request.block.requirements){
                         core.items.add(s.item,s.amount/2);
                     }
                     Call.onDeconstructFinish(request.tile(),request.block,((Player) e.builder).id);
 
-                }else if(DataBase.hasSpecialPerm(player,Perm.build) && !request.breaking){
+                }else if(Database.hasSpecialPerm(player,Perm.build) && !request.breaking){
                     if(core.items.has(request.block.requirements)){
                         happen=true;
                         for(ItemStack s:request.block.requirements){
@@ -184,9 +184,12 @@ public class Main extends Plugin {
         Events.on(ServerLoadEvent.class, e -> {
             netServer.admins.addActionFilter(action -> {
                 Player player = action.player;
-
                 if (player == null) return true;
-                DataBase.getData(player).lastAction=Time.millis();
+                PlayerData pd=Database.getData(player);
+                pd.lastAction=Time.millis();
+                if(pd.rank==Rank.AFK){
+                    Database.updateRank(player);
+                }
                 if (player.isAdmin) return true;
 
                 return antiGriefer.canBuild(player);
@@ -197,14 +200,15 @@ public class Main extends Plugin {
                     return null;
                 }
                 if(AntiGriefer.isGriefer(player)){
-                    if(Time.timeSinceMillis(DataBase.getData(player).lastMessage)<10000L){
+                    if(Time.timeSinceMillis(Database.getData(player).lastMessage)<10000L){
                         AntiGriefer.abuse(player);
                         return null;
                     }
+                    Database.getData(player).lastMessage=Time.millis();
                     return "[pink]"+message;
                 }
-                DataBase.getData(player).lastMessage=Time.millis();
-                return "["+DataBase.getData(player).textColor+"]"+message;
+                Database.getData(player).lastMessage=Time.millis();
+                return "["+Database.getData(player).textColor+"]"+message;
             });
 
             load_items();
@@ -261,6 +265,7 @@ public class Main extends Plugin {
         interruptibles.add(antiGriefer);
         loadSave.put("loadout", loadout);
         loadSave.put("factory", factory);
+        loadSave.put("antiGrifer",antiGriefer);
         configured.put("loadout", loadout);
         configured.put("factory", factory);
     }
@@ -287,7 +292,7 @@ public class Main extends Plugin {
                     b.append(hudMessage).append("\n");
                 }
                 for (Player p : playerGroup.all()) {
-                    if (DataBase.hasEnabled(p,Setting.hud)) {
+                    if (Database.hasEnabled(p,Setting.hud)) {
                         Call.setHudText(p.con, b.toString().substring(0, b.length() - 1));
                     } else {
                         Call.setHudText(p.con, "");
@@ -367,6 +372,20 @@ public class Main extends Plugin {
         Log.info("Autosave started.It will save every "+ interval/60 +"min.");
     }
 
+    public String formPage(Array<String > data,int page,String title){
+        StringBuilder b=new StringBuilder();
+        int pageCount=(int)Math.ceil(data.size/(float)pageSize);
+        page=Mathf.clamp(page,1,pageCount)-1;
+        int start=page*pageSize;
+        int end=min(data.size,(page+1)*pageSize);
+        b.append("[orange]--").append(title.toUpperCase()).append("(").append(page + 1).append("/");
+        b.append(pageCount).append(")--[]\n\n");
+        for(int i=start;i<end;i++){
+            b.append(data.get(i)).append("\n");
+        }
+        return b.toString();
+    }
+
     public static boolean isNotInteger(String str) {
         if (str == null || str.trim().isEmpty()) {
             return true;
@@ -443,7 +462,7 @@ public class Main extends Plugin {
         StringBuilder builder = new StringBuilder();
         builder.append("[orange]Players to kick: \n");
         for(Player p : playerGroup.all()){
-            if(p.isAdmin || p.con == null || p == player || DataBase.hasPerm(p,Perm.higher.getValue())) continue;
+            if(p.isAdmin || p.con == null || p == player || Database.hasPerm(p,Perm.higher)) continue;
 
             builder.append("[lightgray] ").append(p.name).append("[accent] (#").append(p.id).append(")\n");
         }
@@ -461,15 +480,22 @@ public class Main extends Plugin {
     }
 
     public static String cleanName(String name){
+        return cleanName(name,true);
+    }
+
+    public static String cleanName(String name, boolean withRank){
         while (name.contains("[")){
             int first=name.indexOf("["),last=name.indexOf("]");
             name=name.substring(0,first)+name.substring(last+1);
         }
-        while (name.contains("<")){
-            int first=name.indexOf("<"),last=name.indexOf(">");
-            name=name.substring(0,first)+name.substring(last+1);
+        if(withRank){
+            while (name.contains("<")){
+                int first=name.indexOf("<"),last=name.indexOf(">");
+                name=name.substring(0,first)+name.substring(last+1);
+            }
+            name=name.replace(" ","_");
         }
-        name=name.replace(" ","_");
+
         return name;
     }
 
@@ -516,7 +542,7 @@ public class Main extends Plugin {
         handler.register("w-save", "Saves theWorst data.", arg -> save());
 
         handler.register("w-unkick", "<ID/uuid>", "Erases kick status of player player.", arg -> {
-            PlayerData pd = DataBase.findData(arg[0]);
+            PlayerData pd = Database.findData(arg[0]);
             if (pd == null) {
                 Log.info("Player not found.");
                 return;
@@ -525,36 +551,45 @@ public class Main extends Plugin {
             Log.info(pd.originalName + " is not kicked anymore.");
         });
 
-        handler.register("w-database", "[search]", "Shows database,list of all players that " +
-                "ewer been on server.Use search as in browser.", arg ->
-                Log.info(dataBase.report(arg.length == 1 ? arg[0] : null, true, -1)));
+        handler.register("w-database", "[search/online]", "Shows database,list of all players that " +
+                "ewer been on server.Use search as in browser.", arg ->{
+            Array<String> data;
+            if(arg.length==1){
+                data=arg[0].equals("online") ? Database.getOnlinePlayersIndexes() :Database.getAllPlayersIndexes(arg[0]);
+            }else {
+                data=Database.getAllPlayersIndexes(null);
+            }
+            for(String s:data){
+                Log.info(cleanName(s));
+            }
+                });
 
         handler.register("w-set-rank", "<uuid/name/index> <rank>", "", arg -> {
 
-            PlayerData pd = DataBase.findData(arg[0]);
+            PlayerData pd = Database.findData(arg[0]);
             if (pd == null) {
                 Log.info("Player not found.");
                 return;
             }
             try {
-                DataBase.setRank(pd, Rank.valueOf(arg[1]));
+                Database.setRank(pd, Rank.valueOf(arg[1]));
             } catch (IllegalArgumentException e) {
                 Log.info("Rank not found. Ranks:" + Arrays.toString(Rank.values()));
                 return;
             }
             Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
-            Player p = findPlayer(arg[0]);
-            if (p == null) {
-                p = playerGroup.find(player -> player.uuid.equalsIgnoreCase(arg[0]));
-                if (p == null) {
+            Player player = findPlayer(arg[0]);
+            if (player == null) {
+                player = playerGroup.find(p-> p.uuid.equalsIgnoreCase(arg[0]));
+                if (player == null) {
                     return;
                 }
             }
-            DataBase.updateName(p);
+            player.name=pd.originalName+pd.rank.getRank();
         });
 
         handler.register("w-info", "<uuid/name/index>", "Displays info about player.", arg -> {
-            PlayerData pd = DataBase.findData(arg[0]);
+            PlayerData pd = Database.findData(arg[0]);
             if (pd == null) {
                 Log.info("Player not found. Search by name applies only on online players.");
                 return;
@@ -717,7 +752,7 @@ public class Main extends Plugin {
             }else {
                 page=1;
             }
-            Call.onInfoMessage(player.con, changer.info(page));
+            Call.onInfoMessage(player.con,formPage(changer.info(),page,"mpa list"));
         });
 
         handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
@@ -830,7 +865,7 @@ public class Main extends Plugin {
         });
 
         handler.<Player>register("suicide","Kill your self.",(arg, player) -> {
-            if(!DataBase.hasSpecialPerm(player,Perm.suicide)){
+            if(!Database.hasSpecialPerm(player,Perm.suicide)){
                 player.sendMessage("You have to be "+Rank.kamikaze.getRank()+" to suicide.");
                 return;
             }
@@ -849,21 +884,21 @@ public class Main extends Plugin {
             if(notEnoughArgs(player,2,arg)) return;
 
             if(arg[0].equals("textColor")){
-                DataBase.getData(player).textColor=arg[1];
+                Database.getData(player).textColor=arg[1];
                 player.sendMessage(prefix+"["+arg[1]+"]if you see your color in brackets it probably isn t " +
                         "valid or recognized.");
                 return;
             }
             try {
                 Setting s=Setting.valueOf(arg[0]);
-                DataBase.switchSetting(player,s,arg[1].equals("off"));
+                Database.switchSetting(player,s,arg[1].equals("off"));
                 player.sendMessage(prefix+"You toggled the [orange]"+s.name()+"[] "+arg[1]+".");
             } catch (IllegalArgumentException ex){
                 player.sendMessage(prefix+"Non existent setting. Use /set to see options.");
             }
                 });
 
-        handler.<Player>register("info","[name/ID/list] [page]","Displays info about you or another player.",
+        handler.<Player>register("info","[name/ID/list/online] [page]","Displays info about you or another player.",
                 (arg,player)-> {
             if(arg.length>=1){
                 if(arg[0].equals("list")){
@@ -872,10 +907,10 @@ public class Main extends Plugin {
                         page=processArg(player,"Page",arg[1]);
                         if(page==null)return;
                     }
-                    Call.onInfoMessage(player.con,dataBase.report(null,false,page));
+                    Call.onInfoMessage(player.con,formPage(Database.getAllPlayersIndexes(null),page,"player list"));
                     return;
                 }
-                PlayerData pd=DataBase.findData(arg[0]);
+                PlayerData pd=Database.findData(arg[0]);
                 if(pd==null){
                     player.sendMessage(prefix+"Player not found.");
                     return;
@@ -883,7 +918,7 @@ public class Main extends Plugin {
                 Call.onInfoMessage(player.con,pd.toString());
                 return;
             }
-            Call.onInfoMessage(player.con,DataBase.getData(player).toString());
+            Call.onInfoMessage(player.con,Database.getData(player).toString());
                 });
 
         handler.<Player>register("votekick", "[player]", "Vote to kick a player.", (args, player) -> {
@@ -915,13 +950,13 @@ public class Main extends Plugin {
 
         handler.<Player>register("test","<start/egan/quit/numberOfOption>","Complete the test to " +
                         "become verified player.",(args, player) -> tester.processAnswer(player,args[0]));
-        handler.<Player>register("set-Rank","<playerName/uuid/ID> <rankName>","Command for admins.",(args,player)->{
+        handler.<Player>register("set-rank","<playerName/uuid/ID> <rankName>","Command for admins.",(args,player)->{
             if(!player.isAdmin){
                 player.sendMessage(prefix+"You are not admin.");
                 return;
             }
 
-            PlayerData pd=DataBase.findData(args[0]);
+            PlayerData pd=Database.findData(args[0]);
             if(pd==null ){
                 player.sendMessage(prefix+"Player not found.");
                 return;
@@ -933,7 +968,7 @@ public class Main extends Plugin {
                     player.sendMessage(prefix+"You cannot use this rank.");
                     return;
                 }
-                DataBase.setRank(pd,rank);
+                Database.setRank(pd,rank);
             }catch (IllegalArgumentException e){
                 player.sendMessage(prefix+"Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
                 return;
@@ -944,7 +979,7 @@ public class Main extends Plugin {
             if(p==null){
                 return;
             }
-            DataBase.updateName(p);
+            p.name=p.name+pd.rank.getRank();
         });
         handler.<Player>register("dm","<player> <text...>", "Send direct message to player.", (arg,player) -> {
             StringBuilder b=new StringBuilder();

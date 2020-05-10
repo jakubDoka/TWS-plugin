@@ -10,7 +10,7 @@ import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import theWorst.Main;
 import theWorst.Package;
-import theWorst.dataBase.DataBase;
+import theWorst.dataBase.Database;
 import theWorst.dataBase.Perm;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
@@ -80,7 +80,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
     @Override
     public void launch(Package p) {
         Timer.Task task;
-        DataBase.getData(p.target).loadoutVotes++;
+        Database.getData(p.target).loadoutVotes++;
         Item targetItem = getItemByName(p.object);
         CoreBlock.CoreEntity core = getCore(p.target);
         if(core==null)return;
@@ -141,7 +141,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             return null;
         }
         Package p=new Package(object, amount, toBase, player);
-        if(DataBase.hasSpecialPerm(player, Perm.loadout)){
+        if(Database.hasSpecialPerm(player, Perm.loadout)){
             launch(p);
             Call.sendMessage(Main.prefix+player.name+" just used loadout.");
             return null;

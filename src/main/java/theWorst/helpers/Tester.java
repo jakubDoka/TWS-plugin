@@ -8,7 +8,7 @@ import mindustry.entities.type.Player;
 import org.json.simple.JSONArray;
 import theWorst.AntiGriefer;
 import theWorst.Main;
-import theWorst.dataBase.DataBase;
+import theWorst.dataBase.Database;
 import theWorst.dataBase.Perm;
 import theWorst.dataBase.Rank;
 
@@ -60,7 +60,7 @@ public class Tester {
             if(tested.get(player.uuid)[1]/(float)questions.size>.8){
                 player.sendMessage(Main.prefix+"[green]Congratulation you passed the test! You will obtain " +
                         "rank VERIFIED witch means that emergency no longer affects you.");
-                DataBase.setRank(player, Rank.verified);
+                Database.setRank(player, Rank.verified);
                 tested.removeKey(player.uuid);
                 return;
             }
@@ -78,7 +78,7 @@ public class Tester {
 
     public void processAnswer(Player player,String answer){
         String uuid=player.uuid;
-        if(DataBase.hasPerm(player, Perm.high.getValue())){
+        if(Database.hasPerm(player, Perm.high)){
             player.sendMessage(Main.prefix+"You don t need test, you are already verified.");
             return;
         }
