@@ -19,6 +19,7 @@ import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.ItemType;
 
+import java.awt.*;
 import java.io.*;
 import java.util.Arrays;
 
@@ -94,7 +95,19 @@ public class Main extends Plugin {
             changer.endGame(e.winner==Team.sharded);
         });
 
-        Events.on(PlayEvent.class, e-> changer.startGame());
+        Events.on(PlayEvent.class, e-> {
+            changer.startGame();
+            skipper.countSpawns();
+        });
+
+        Events.on(WaveEvent.class, e->{
+            String waveInfo=skipper.getWaveInfo();
+            for(Player p:playerGroup){
+                if(Database.hasEnabled(p,Setting.waveInfo)){
+                    p.sendMessage(waveInfo);
+                }
+            }
+        });
 
         Events.on(BlockBuildEndEvent.class, e->{
             if(e.player == null) return;
@@ -529,6 +542,10 @@ public class Main extends Plugin {
         handler.removeCommand("say");
         handler.removeCommand("admin");
 
+        handler.register("test", "", arg -> {
+            Log.info(skipper.getWaveInfo());
+        });
+
         handler.register("say","<text...>", "send message to all players.", arg -> {
             StringBuilder b=new StringBuilder();
             for(String s:arg){
@@ -703,7 +720,7 @@ public class Main extends Plugin {
 
         handler.<Player>register("mkgf","[playerName]","Adds, or removes if payer is marked, griefer mark of given " +
                         "player name.",(arg, player) ->{
-            if(playerGroup.size() < 3) {
+            if(playerGroup.size() < 3 && !player.isAdmin) {
                 player.sendMessage(prefix+"At least 3 players are needed to mark a griefer.");
                 return;
             }
