@@ -1,6 +1,5 @@
 package theWorst.dataBase;
 
-import arc.graphics.Color;
 import arc.util.Log;
 import arc.util.Timer;
 import mindustry.content.Items;
@@ -18,6 +17,7 @@ import theWorst.interfaces.Votable;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Objects;
 
 import static mindustry.Vars.*;
 import static mindustry.Vars.netServer;
@@ -34,6 +34,7 @@ public class Database implements Votable {
             for(Player p:playerGroup){
                 PlayerData pd=getData(p);
                 if(Rank.AFK.condition(pd)){
+                    if(pd.rank==Rank.AFK) return;
                     setRank(p,Rank.AFK);
                     Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] obtained "+Rank.AFK.getName()+" rank.");
                 }else if(pd.rank==Rank.AFK){
@@ -221,7 +222,7 @@ public class Database implements Votable {
     }
 
     public static void updateName(Player player,PlayerData pd){
-        player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix():getSpecialRank(pd).getSuffix());
+        player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix(): Objects.requireNonNull(getSpecialRank(pd)).getSuffix());
     }
 
     public void onConnect(Player player){
@@ -301,7 +302,7 @@ public class Database implements Votable {
     public void launch(Package p) {
         for(Player player:playerGroup){
             if(getData(player).rank==Rank.AFK && !player.isAdmin){
-                player.con.kick("You have been AFK when kickAllAfk vote passed.");
+                player.con.kick("You have been AFK when kickAllAfk vote passed.",0);
             }
         }
     }

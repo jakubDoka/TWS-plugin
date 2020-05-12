@@ -119,10 +119,10 @@ public class Main extends Plugin {
             PlayerData pd=Database.getData(e.player);
             if(e.breaking){
                 pd.buildingsBroken++;
-                Database.updateRank(e.player,Stat.buildingsBuilt);
+                Database.updateRank(e.player,Stat.buildingsBroken);
             }else {
                 pd.buildingsBuilt++;
-                Database.updateRank(e.player,Stat.buildingsBroken);
+                Database.updateRank(e.player,Stat.buildingsBuilt);
             }
 
         });
@@ -134,6 +134,7 @@ public class Main extends Plugin {
                 CoreBlock.CoreEntity core=Loadout.getCore(player);
                 if(core==null) return;
                 BuilderTrait.BuildRequest request = player.buildRequest();
+                if(request==null) return;
                 if(Database.hasSpecialPerm(player,Perm.destruct) && request.breaking){
                     happen=true;
                     for(ItemStack s:request.block.requirements){
@@ -873,6 +874,10 @@ public class Main extends Plugin {
 
         handler.<Player>register("vote", "<map/skipwave/restart/gameover/kickAllAfk/y/n> [indexOrName/waveAmount]", "Opens vote session or votes in case of votekick.",
                 (arg, player) -> {
+            if(Database.getData(player).rank==Rank.AFK){
+                player.sendMessage(prefix+"You are AFK vote isn t enabled for you.");
+                return;
+            }
             Package p;
             String secArg = arg.length == 2 ? arg[1] : "0";
             switch (arg[0]) {
