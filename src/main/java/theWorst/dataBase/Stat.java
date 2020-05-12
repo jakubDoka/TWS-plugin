@@ -7,5 +7,10 @@ public enum Stat{
     enemiesKilled,
     deaths,
     gamesPlayed,
-    gamesWon
+    gamesWon,
+    factoryVotes,
+    age,
+    messageCount,
+    loadoutVotes,
+    none
 }

@@ -87,10 +87,14 @@ public class Main extends Plugin {
 
         Events.on(GameOverEvent.class, e ->{
             for(Player p:playerGroup){
+                PlayerData pd=Database.getData(p);
                 if(p.getTeam()==e.winner) {
-                    dataBase.updateStats(p, Stat.gamesWon);
+                    pd.gamesWon++;
+                    Database.updateRank(p,Stat.gamesWon);
                 }
-                dataBase.updateStats(p, Stat.gamesPlayed);
+                pd.gamesPlayed++;
+                Database.updateRank(p,Stat.gamesPlayed);
+
             }
             changer.endGame(e.winner==Team.sharded);
         });
@@ -112,7 +116,15 @@ public class Main extends Plugin {
         Events.on(BlockBuildEndEvent.class, e->{
             if(e.player == null) return;
             if(!e.breaking && e.tile.block().buildCost/60<1) return;
-            dataBase.updateStats(e.player,e.breaking ? Stat.buildingsBroken:Stat.buildingsBuilt);
+            PlayerData pd=Database.getData(e.player);
+            if(e.breaking){
+                pd.buildingsBroken++;
+                Database.updateRank(e.player,Stat.buildingsBuilt);
+            }else {
+                pd.buildingsBuilt++;
+                Database.updateRank(e.player,Stat.buildingsBroken);
+            }
+
         });
 
         Events.on(BuildSelectEvent.class, e->{
@@ -147,12 +159,15 @@ public class Main extends Plugin {
 
         Events.on(EventType.UnitDestroyEvent.class, e->{
             if(e.unit instanceof Player){
-                dataBase.updateStats((Player)e.unit,Stat.deaths);
+                Database.getData((Player) e.unit).deaths++;
+                Database.updateRank((Player) e.unit,Stat.deaths);
             }else if(e.unit.getTeam()==Team.crux){
                 for(Player p:playerGroup){
-                    dataBase.updateStats(p,Stat.enemiesKilled);
+                    Database.getData(p).enemiesKilled++;
+                    Database.updateRank(p,Stat.enemiesKilled);
                 }
             }
+
         });
 
         Events.on(PlayerChatEvent.class, e -> {
@@ -201,27 +216,29 @@ public class Main extends Plugin {
                 PlayerData pd=Database.getData(player);
                 pd.lastAction=Time.millis();
                 if(pd.rank==Rank.AFK){
-                    Database.updateRank(player);
+                    dataBase.afkThread.run();
                 }
                 if (player.isAdmin) return true;
 
                 return antiGriefer.canBuild(player);
             });
-
             netServer.admins.addChatFilter((player,message)->{
+                String msgColor="["+Database.getData(player).textColor+"]";
+                PlayerData pd=Database.getData(player);
                 if((message.equals("y") || message.equals("n")) && vote.voting){
                     return null;
                 }
                 if(AntiGriefer.isGriefer(player)){
-                    if(Time.timeSinceMillis(Database.getData(player).lastMessage)<10000L){
+                    if(Time.timeSinceMillis(pd.lastMessage)<10000L){
                         AntiGriefer.abuse(player);
                         return null;
                     }
-                    Database.getData(player).lastMessage=Time.millis();
-                    return "[pink]"+message;
+                    msgColor="[pink]";
                 }
-                Database.getData(player).lastMessage=Time.millis();
-                return "["+Database.getData(player).textColor+"]"+message;
+                pd.lastMessage=Time.millis();
+                pd.messageCount++;
+                Database.updateRank(player,Stat.messageCount);
+                return msgColor+message;
             });
 
             load_items();
@@ -385,7 +402,7 @@ public class Main extends Plugin {
         Log.info("Autosave started.It will save every "+ interval/60 +"min.");
     }
 
-    public String formPage(Array<String > data,int page,String title){
+    public String formPage(Array<String > data,int page,String title,int pageSize){
         StringBuilder b=new StringBuilder();
         int pageCount=(int)Math.ceil(data.size/(float)pageSize);
         page=Mathf.clamp(page,1,pageCount)-1;
@@ -546,6 +563,16 @@ public class Main extends Plugin {
             Log.info(skipper.getWaveInfo());
         });
 
+        handler.register("w-help","<ranks/factory>","Shows better explanation and more information" +
+                "acout entered topic.",arg->{
+            switch (arg[0]){
+                case "ranks":
+                    SpecialRank.help();
+                case "factory":
+                    Log.info("Missing.");
+            }
+        });
+
         handler.register("say","<text...>", "send message to all players.", arg -> {
             StringBuilder b=new StringBuilder();
             for(String s:arg){
@@ -602,7 +629,7 @@ public class Main extends Plugin {
                     return;
                 }
             }
-            player.name=pd.originalName+pd.rank.getRank();
+           Database.updateName(player,pd);
         });
 
         handler.register("w-info", "<uuid/name/index>", "Displays info about player.", arg -> {
@@ -769,7 +796,7 @@ public class Main extends Plugin {
             }else {
                 page=1;
             }
-            Call.onInfoMessage(player.con,formPage(changer.info(),page,"mpa list"));
+            Call.onInfoMessage(player.con,formPage(changer.info(),page,"mpa list",pageSize));
         });
 
         handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
@@ -844,7 +871,7 @@ public class Main extends Plugin {
             vote.aVote(builder, p, "building " + arg[0] + " core");
         });
 
-        handler.<Player>register("vote", "<map/skipwave/restart/gameover/y/n> [indexOrName/waveAmount]", "Opens vote session or votes in case of votekick.",
+        handler.<Player>register("vote", "<map/skipwave/restart/gameover/kickAllAfk/y/n> [indexOrName/waveAmount]", "Opens vote session or votes in case of votekick.",
                 (arg, player) -> {
             Package p;
             String secArg = arg.length == 2 ? arg[1] : "0";
@@ -853,7 +880,7 @@ public class Main extends Plugin {
                     p = changer.verify(player, secArg, 0, false);
                     if (p == null) return;
 
-                    vote.aVote(changer, p, "changing map to " + ((mindustry.maps.Map)p.obj).name() + ". ");
+                    vote.aVote(changer, p, "changing map to " + ((mindustry.maps.Map)p.obj).name());
                     return;
                 case "skipwave":
                     Integer amount=processArg(player,"Wave amount",secArg);
@@ -870,6 +897,8 @@ public class Main extends Plugin {
                     vote.aVote(changer, new Package(null ,null, player),
                             "gameover.");
                     return;
+                case "kickAllAfk":
+                    vote.aVote(dataBase,new Package(null,null ,player),"kick all afk players");
                 case "y":
                     voteKick.vote(player,1);
                     return;
@@ -883,7 +912,7 @@ public class Main extends Plugin {
 
         handler.<Player>register("suicide","Kill your self.",(arg, player) -> {
             if(!Database.hasSpecialPerm(player,Perm.suicide)){
-                player.sendMessage("You have to be "+Rank.kamikaze.getRank()+" to suicide.");
+                //player.sendMessage("You have to be "+Rank.kamikaze.getSuffix()+" to suicide.");
                 return;
             }
             player.onDeath();
@@ -915,16 +944,23 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.<Player>register("info","[name/ID/list/online] [page]","Displays info about you or another player.",
+        handler.<Player>register("info","[name/ID|list/online/ranks] [page]","Displays info about you or another player.",
                 (arg,player)-> {
             if(arg.length>=1){
-                if(arg[0].equals("list")){
-                    Integer page=1;
-                    if(arg.length==2){
-                        page=processArg(player,"Page",arg[1]);
-                        if(page==null)return;
-                    }
-                    Call.onInfoMessage(player.con,formPage(Database.getAllPlayersIndexes(null),page,"player list"));
+                Integer page=1;
+                if(arg.length==2){
+                    page=processArg(player,"Page",arg[1]);
+                    if(page==null)return;
+                }
+                if(arg[0].equals("list") || arg[0].equals("online")){
+
+                    Call.onInfoMessage(player.con, formPage(
+                            arg[0].equals("list") ? Database.getAllPlayersIndexes(null):Database.getOnlinePlayersIndexes(),
+                            page, "player list",pageSize));
+                    return;
+                }
+                if(arg[0].equals("ranks")){
+                    Call.onInfoMessage(player.con, formPage(Database.getRankInfo(), page, "rank info",pageSize));
                     return;
                 }
                 PlayerData pd=Database.findData(arg[0]);
@@ -955,6 +991,7 @@ public class Main extends Plugin {
             if(player.isLocal){
                 player.sendMessage(prefix+"Just kick them yourself if you're the host.");
                 return;
+
             }
             if(args.length == 0) {
                 player.sendMessage(getPlayerList());
@@ -967,6 +1004,7 @@ public class Main extends Plugin {
 
         handler.<Player>register("test","<start/egan/quit/numberOfOption>","Complete the test to " +
                         "become verified player.",(args, player) -> tester.processAnswer(player,args[0]));
+
         handler.<Player>register("set-rank","<playerName/uuid/ID> <rankName>","Command for admins.",(args,player)->{
             if(!player.isAdmin){
                 player.sendMessage(prefix+"You are not admin.");
@@ -991,12 +1029,12 @@ public class Main extends Plugin {
                 return;
             }
 
-            player.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + pd.rank.getRankAnyway() + ".");
+            player.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + pd.rank.getName() + ".");
             Player p=findPlayer(args[0]);
             if(p==null){
                 return;
             }
-            p.name=p.name+pd.rank.getRank();
+            Database.updateName(p,pd);
         });
 
         handler.<Player>register("dm","<player> <text...>", "Send direct message to player.", (arg,player) -> {

@@ -1,6 +1,9 @@
 package theWorst.dataBase;
 
+import arc.graphics.Color;
 import arc.util.Log;
+import arc.util.Timer;
+import mindustry.content.Items;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import mindustry.net.Administration;
@@ -10,16 +13,37 @@ import theWorst.Main;
 
 import java.io.*;
 import arc.struct.Array;
+import theWorst.Package;
+import theWorst.interfaces.Votable;
+
 import java.util.HashMap;
 import java.util.HashSet;
 
 import static mindustry.Vars.*;
 import static mindustry.Vars.netServer;
 
-public class Database {
+public class Database implements Votable {
     static HashMap<String,PlayerData> data=new HashMap<>();
-    final String saveFile= Main.directory+"database.ser";
-    final String rankFile= Main.directory+"rankConfig.json";
+    public static HashMap<String,SpecialRank> ranks=new HashMap<>();
+    public final static String saveFile= Main.directory+"database.ser";
+    public final static String rankFile= Main.directory+"rankConfig.json";
+    public Timer.Task afkThread;
+
+    public Database(){
+        afkThread=Timer.schedule(()->{
+            for(Player p:playerGroup){
+                PlayerData pd=getData(p);
+                if(Rank.AFK.condition(pd)){
+                    setRank(p,Rank.AFK);
+                    Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] obtained "+Rank.AFK.getName()+" rank.");
+                }else if(pd.rank==Rank.AFK){
+                    Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] lost his "+pd.rank.getName()+" rank.");
+                    pd.rank=pd.trueRank;
+                    p.name=pd.originalName+pd.rank.getSuffix();
+                }
+            }
+        },0,60);
+    }
 
     public void save() {
         try {
@@ -95,7 +119,7 @@ public class Database {
     }
 
     public static String formLine(PlayerData pd){
-        return "[yellow]"+pd.serverId+"[] | [gray]"+pd.originalName+"[] | "+pd.trueRank.getRankAnyway();
+        return "[yellow]"+pd.serverId+"[] | [gray]"+pd.originalName+"[] | "+pd.trueRank.getName();
     }
 
     public static Array<String> getOnlinePlayersIndexes(){
@@ -114,6 +138,14 @@ public class Database {
             PlayerData pd=getData(uuid);
             if(search!=null && !pd.originalName.startsWith(search)) continue;
             res.add(formLine(pd));
+        }
+        return res;
+    }
+
+    public static Array<String> getRankInfo(){
+        Array<String> res=new Array<>();
+        for(SpecialRank sr:ranks.values()){
+            res.add(sr.getSuffix()+"-[gray]"+sr.description+"[]\n");
         }
         return res;
     }
@@ -140,7 +172,7 @@ public class Database {
             player=playerGroup.find(p->p.name.equals(pd.originalName));
             if(player==null) return;
         }
-        player.name=pd.originalName+pd.rank.getRank();
+        player.name=pd.originalName+pd.rank.getSuffix();
         player.isAdmin=rank.isAdmin;
     }
 
@@ -152,51 +184,30 @@ public class Database {
         setRank(getData(player),rank,player);
     }
 
-    public static void updateRank(Player player){
+    public static void updateRank(Player player,Stat stat){
         PlayerData pd=getData(player);
-        if(pd.trueRank==Rank.griefer) return;
-        for(Rank r:Rank.values()){
-            if(r.condition(player)){
-                int val=pd.rank.getValue();
-                if(r.getValue()>val){
-                    Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] obtained "+r.getRankAnyway()+" rank.");
-                    setRank(pd,r,player);
-                    return;
+        SpecialRank specialRank=getSpecialRank(pd);
+        if(pd.trueRank.permission==Perm.none) return;
+        boolean set=false;
+        for(SpecialRank sr:ranks.values()){
+            if((sr.stat==stat || stat==null) && sr.condition(pd)){
+                if(pd.specialRank==null || specialRank.value<sr.value){
+                    Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] obtained "+sr.getSuffix()+" rank.");
+                    pd.specialRank=sr.name;
+                    player.name=pd.originalName+sr.getSuffix();
                 }
-                if(r.getValue()==val){
-                    return;
-                }
+                set=true;
             }
         }
-        if(!pd.rank.permanent){
-            Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] lost his "+pd.rank.getRankAnyway()+" rank.");
-            pd.rank=pd.trueRank;
-            player.name=pd.originalName+pd.rank.getRank();
-        }
+        if(set || pd.specialRank==null || specialRank.stat!=stat)return;
+        Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] lost his "+getSpecialRank(pd).getSuffix()+" rank.");
+        pd.specialRank=null;
+        player.name=pd.originalName+pd.rank.getSuffix();
     }
 
-    public void updateStats(Player player,Stat stat){
-        PlayerData data=getData(player);
-        switch (stat) {
-            case deaths:
-                data.deaths+=1;
-                break;
-            case gamesWon:
-                data.gamesWon+=1;
-                break;
-            case buildingsBroken:
-                data.buildingsBroken+=1;
-                break;
-            case buildingsBuilt:
-                data.buildingsBuilt+=1;
-                break;
-            case gamesPlayed:
-                data.gamesPlayed+=1;
-                break;
-            case enemiesKilled:
-                data.enemiesKilled+=1;
-        }
-        updateRank(player);
+    public static SpecialRank getSpecialRank(PlayerData pd){
+        if(pd.specialRank==null) return null;
+        return ranks.get(pd.specialRank);
     }
 
     public static boolean hasPerm(Player player,Perm perm){
@@ -204,7 +215,13 @@ public class Database {
     }
 
     public static boolean hasSpecialPerm(Player player,Perm perm){
-        return getData(player).rank.permission==perm;
+        SpecialRank sr=getSpecialRank(getData(player));
+        if(sr==null) return false;
+        return sr.permissions.contains(perm);
+    }
+
+    public static void updateName(Player player,PlayerData pd){
+        player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix():getSpecialRank(pd).getSuffix());
     }
 
     public void onConnect(Player player){
@@ -219,8 +236,8 @@ public class Database {
         if(AntiGriefer.isSubNetBanned(player)){
             setRank(player,Rank.griefer);
         } else {
-            updateRank(player);
-            player.name=pd.originalName+pd.rank.getRank();
+            updateRank(player,null);
+            updateName(player,pd);
         }
 
         player.isAdmin=pd.trueRank.isAdmin;
@@ -232,30 +249,10 @@ public class Database {
 
     public void loadRanks(){
         Main.loadJson(rankFile,(data)->{
+            ranks.clear();
             for(Object o:data.keySet()){
                 String key=(String)o;
-                try{
-                    Rank rank=Rank.valueOf(key);
-                    JSONObject settings=(JSONObject) data.get(key);
-                    if (settings.containsKey(stb.isAdmin)) rank.isAdmin=(boolean)settings.get(stb.isAdmin);
-                    if (settings.containsKey(stb.displayed)) rank.displayed=(boolean)settings.get(stb.displayed);
-                    if (settings.containsKey(stb.permanent)) rank.permanent=(boolean)settings.get(stb.permanent);
-                    if (settings.containsKey(stb.required)) rank.required=Main.getInt(settings.get(stb.required));
-                    if (settings.containsKey(stb.frequency)) rank.frequency=Main.getInt(settings.get(stb.frequency));
-                    if (settings.containsKey(stb.description)) rank.description=(String)settings.get(stb.description);
-                    if (settings.containsKey(stb.permission)){
-                        String perm=(String)settings.get(stb.permission);
-                        try{
-                            rank.permission=Perm.valueOf(perm);
-                        }catch (IllegalArgumentException ex){
-                            Log.info("Rank "+perm+"Does not exist.It will be ignored.");
-                        }
-                    }
-                    rank.isAdmin=(boolean)settings.get("isAdmin");
-                } catch (IllegalArgumentException ex){
-                    Log.info("Rank "+key+"Does not exist.It will be ignored.");
-                }
-
+                ranks.put(key,new SpecialRank(key,(JSONObject) data.get(key)));
             }
         },this::createDefaultRankConfig);
     }
@@ -265,29 +262,52 @@ public class Database {
                 "Default "+rankFile+" created.Edit it adn the use apply config Command",
                 ()->{
                     JSONObject data=new JSONObject();
-                    for(Rank r:Rank.values()){
-                        JSONObject settings=new JSONObject();
-                        settings.put(stb.isAdmin,r.isAdmin);
-                        settings.put(stb.displayed,r.displayed);
-                        settings.put(stb.permanent,r.permanent);
-                        settings.put(stb.required,r.required);
-                        settings.put(stb.frequency,r.frequency);
-                        settings.put(stb.description,r.description);
-                        settings.put(stb.permission, r.permission.name());
-                        data.put(r.name(),settings);
-                    }
+                    JSONObject rank=new JSONObject();
+                    rank.put("comment","This rank can be only obtained by having total count of deaths higher then " +
+                            "other players,permission determinate special ability.");
+                    rank.put("permission",Perm.suicide.name());
+                    rank.put("tracked",Stat.deaths.name());
+                    rank.put("mode",SpecialRank.Mode.best.name());
+                    rank.put("value",1);
+                    rank.put("color","#"+ Items.blastCompound.color);
+                    rank.put("description","If you die the most of all players you ll obtain this rank. It allows you" +
+                            "to use suicide command.");
+                    data.put("kamikaze",rank);
+                    rank=new JSONObject();
+                    rank.put("comment","This rank can be only obtained by having total count of buildingsBuilt 5000 and" +
+                            "average build rate per hour 300.Build rate calculation: buildingsBuilt/playTime_in_hours");
+                    rank.put("permission",Perm.build.name());
+                    rank.put("tracked",Stat.buildingsBuilt.name());
+                    rank.put("mode",SpecialRank.Mode.reqFreq.name());
+                    rank.put("value",2);
+                    rank.put("color","#"+ Items.plastanium.color);
+                    rank.put("frequency",300);
+                    rank.put("requirement",5000);
+                    rank.put("description","If you build a lot you will obtain this rank.When i mean a lot i mean a [red]LOT[].");
+                    data.put("builder",rank);
+                    rank=new JSONObject();
+                    rank.put("comment","This rank can e only given by command and will stay until the condition of" +
+                            "rank with higher value is met or rank is set to none.");
+                    rank.put("permanent",true);
+                    rank.put("color","yellow");
+                    rank.put("value",3);
+                    rank.put("description","It depends on how annoying you are to server owner.");
+                    data.put("KID",rank);
                     return data;
                 });
     }
 
-    enum stb{
-        isAdmin,
-        displayed,
-        required,
-        frequency,
-        permanent,
-        description,
-        permission
+    @Override
+    public void launch(Package p) {
+        for(Player player:playerGroup){
+            if(getData(player).rank==Rank.AFK && !player.isAdmin){
+                player.con.kick("You have been AFK when kickAllAfk vote passed.");
+            }
+        }
     }
 
+    @Override
+    public Package verify(Player player, String object, int amount, boolean toBase) {
+        return null;
+    }
 }

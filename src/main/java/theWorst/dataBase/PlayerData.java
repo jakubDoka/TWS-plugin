@@ -5,15 +5,18 @@ import mindustry.entities.type.Player;
 import mindustry.net.Administration;
 import theWorst.Main;
 
+
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
 
 import static mindustry.Vars.*;
 
 
-public class PlayerData implements Cloneable,java.io.Serializable{
+public class PlayerData implements Cloneable, Serializable {
     public Rank rank = Rank.newcomer;
     public Rank trueRank = Rank.newcomer;
+    public String specialRank=null;
     public int serverId;
     public int playTime = 1;
     public int buildingsBuilt = 0;
@@ -24,6 +27,7 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     public int gamesWon = 0;
     public int factoryVotes =0;
     public int loadoutVotes =0;
+    public int messageCount =0;
     public long born = Time.millis();
     public long connected = 0;
     public long lastMessage = 0;
@@ -50,13 +54,13 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     }
 
     public String toString(){
-        String special=trueRank==rank ? "none":rank.getRankAnyway();
+        String special=specialRank==null ? "none":Database.getSpecialRank(this).getSuffix();
         String activity=connected>lastActive ? "[green]currently active[]":
                 "[gray]inactive for []" + Main.milsToTime(Time.timeSinceMillis(lastActive));
         return "[orange]==PLayer data==[]\n\n" +
                 "[yellow]Level:[]" + getLevel() + " | [yellow]server ID:[]" + serverId + "\n" +
                 "[gray]name:[] " + originalName + "\n" +
-                "[gray]rank:[] " + trueRank.getRankAnyway() + "\n" +
+                "[gray]rank:[] " + trueRank.getName() + "\n" +
                 "[gray]special rank:[] " + special + "\n" +
                 "[gray]playtime:[] " + Main.milsToTime(playTime) + "\n" +
                 "[gray]server age[]: " + Main.milsToTime(Time.timeSinceMillis(born)) + "\n" +
@@ -117,6 +121,35 @@ public class PlayerData implements Cloneable,java.io.Serializable{
     public void disconnect() {
         playTime+=Time.timeSinceMillis(connected);
         lastActive=Time.millis();
+    }
+
+    public long getStat(Stat stat){
+        switch (stat) {
+            case deaths:
+                return deaths;
+            case gamesWon:
+                return gamesWon;
+            case buildingsBroken:
+                return buildingsBroken;
+            case buildingsBuilt:
+                return buildingsBuilt;
+            case gamesPlayed:
+                return gamesPlayed;
+            case enemiesKilled:
+                return enemiesKilled;
+            case playTime:
+                return playTime;
+            case factoryVotes:
+                return factoryVotes;
+            case loadoutVotes:
+                return loadoutVotes;
+            case messageCount:
+                return messageCount;
+            case age:
+                return Time.timeSinceMillis(born);
+            default:
+                return 0;
+        }
     }
 
 

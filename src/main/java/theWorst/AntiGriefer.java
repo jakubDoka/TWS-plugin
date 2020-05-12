@@ -89,7 +89,7 @@ public class AntiGriefer implements Votable, Interruptible,LoadSave{
 
     public static boolean verifyTarget(Player target,Player player,String matter){
         if(Database.hasPerm(target, Perm.higher)){
-            player.sendMessage(Main.prefix+"You cannot kick " + Database.getData(target).trueRank.getRankAnyway() + ".");
+            player.sendMessage(Main.prefix+"You cannot kick " + Database.getData(target).trueRank.getName() + ".");
             return true;
         }
         if(target.isAdmin){

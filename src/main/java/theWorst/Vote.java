@@ -101,7 +101,7 @@ public class Vote implements Interruptible {
     public static int getRequired() {
         int count = 0;
         for(Player p:playerGroup){
-            if(AntiGriefer.isGriefer(p)) continue;
+            if(Database.hasPerm(p,Perm.none)) continue;
             count+=1;
         }
         if (count == 2) {

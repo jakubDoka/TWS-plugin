@@ -31,81 +31,20 @@ public enum Rank implements java.io.Serializable{
             isAdmin=true;
         }
     },
-    depositor(Items.surgealloy.color,Perm.loadout){
-        {
-            permanent=false;
-            required=300;
-            frequency=4;
-        }
-        @Override
-        public boolean condition(Player player) {
-            PlayerData data=Database.getData(player);
-            return check(data,data.loadoutVotes);
-        }
-    },
-    general(Items.phasefabric.color,Perm.factory){
-        {
-            permanent=false;
-            required=300;
-            frequency=4;
-        }
-        @Override
-        public boolean condition(Player player) {
-            PlayerData data=Database.getData(player);
-            return check(data,data.factoryVotes);
-        }
-    },
-    kamikaze(Items.blastCompound.color,Perm.suicide){
-        {
-            permanent=false;
-            required=5000;
-            frequency=10;
-        }
-        @Override
-        public boolean condition(Player player) {
-            PlayerData data=Database.getData(player);
-            return check(data,data.deaths);
-        }
-    },
-    builder(Items.plastanium.color,Perm.build){
-        {
-            permanent=false;
-            required=30000;
-            frequency=1000;
-        }
-        @Override
-        public boolean condition(Player player) {
-            PlayerData data=Database.getData(player);
-            return check(data,data.buildingsBuilt);
-        }
-    },
-    bulldozer(Items.pyratite.color,Perm.destruct){
-        {
-            permanent=false;
-            required=10000;
-            frequency=200;
-        }
-        @Override
-        public boolean condition(Player player) {
-            PlayerData data=Database.getData(player);
-            return check(data,data.buildingsBroken);
-        }
-    },
     owner(Color.gold,Perm.highest){
         {
             isAdmin=true;
         }
     },
-    AFK(Color.gray){
+    AFK(Color.gray,Perm.none){
         {
             permanent=false;
             required=1000*60*5;
             frequency=0;
         }
         @Override
-        public boolean condition(Player player) {
-            PlayerData data=Database.getData(player);
-            return Time.timeSinceMillis(data.lastAction)>required;
+        public boolean condition(PlayerData pd) {
+            return Time.timeSinceMillis(pd.lastAction)>required;
         }
     };
 
@@ -138,20 +77,15 @@ public enum Rank implements java.io.Serializable{
         this.permission=permission;
     }
 
-    public String getRank() {
+    public String getSuffix() {
         return displayed ? "[#"+color+"]<"+name()+">[]":"";
     }
 
-    public String getRankAnyway() {
+    public String getName() {
         return  "[#"+color+"]<"+name()+">[]";
     }
 
-    public boolean condition(Player player) {
+    public boolean condition(PlayerData pd) {
         return false;
-    }
-
-    public boolean check(PlayerData pd,int value){
-        if (pd.playTime==0) return false;
-        return value>required && value/(pd.playTime/(1000*60*60))>frequency;
     }
 }
