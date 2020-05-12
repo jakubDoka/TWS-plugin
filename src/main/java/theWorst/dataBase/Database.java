@@ -215,6 +215,10 @@ public class Database implements Votable {
         return getData(player).trueRank.permission.getValue()>=perm.getValue();
     }
 
+    public static boolean hasThisPerm(Player player,Perm perm){
+        return getData(player).trueRank.permission==perm;
+    }
+
     public static boolean hasSpecialPerm(Player player,Perm perm){
         SpecialRank sr=getSpecialRank(getData(player));
         if(sr==null) return false;

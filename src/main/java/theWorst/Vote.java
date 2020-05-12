@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import static mindustry.Vars.player;
 import static mindustry.Vars.playerGroup;
 
 public class Vote implements Interruptible {
@@ -101,7 +102,7 @@ public class Vote implements Interruptible {
     public static int getRequired() {
         int count = 0;
         for(Player p:playerGroup){
-            if(Database.hasPerm(p,Perm.none)) continue;
+            if(Database.hasPerm(player,Perm.none)) continue;
             count+=1;
         }
         if (count == 2) {
