@@ -36,25 +36,25 @@ public class WaveSkipper implements Votable {
         int mil=1000000;
         int wave=state.wave+1;
         int firstAirWave=mil;
-        HashMap<UnitType,Integer> units =new HashMap<>();
+        /*HashMap<UnitType,Integer> units =new HashMap<>();
         for(UnitType u:content.units()){
             units.put(u,0);
-        }
+        }*/
         StringBuilder b=new StringBuilder();
         for(SpawnGroup sg:state.rules.spawns){
             if(sg.type.flying && sg.begin<firstAirWave) firstAirWave=sg.begin;
-            if(wave<sg.begin || wave>sg.end) continue;
+            /*if(wave<sg.begin || wave>sg.end) continue;
             int progress=wave-sg.begin;
             int unitAmount=(int)(sg.unitAmount+progress*(sg.unitScaling>mil ? 0:sg.unitScaling));
-            units.put(sg.type,units.get(sg.type)+Math.min(unitAmount,sg.max));
+            units.put(sg.type,units.get(sg.type)+Math.min(unitAmount,sg.max));*/
 
         }
-        b.append("[orange]Next wave:[]\n");
+        /*b.append("[orange]Next wave:[]\n");
         for(UnitType u:units.keySet()){
             if(units.get(u)==0) continue;
             b.append("[gray]").append(u.name).append(":[]").append(units.get(u)).append(" ");
         }
-        b.append("\n");
+        b.append("\n");*/
         if(firstAirWave!=mil && firstAirWave>wave && wave%5==2){
             b.append("[gray]First air wave at:[]").append(firstAirWave);
         }

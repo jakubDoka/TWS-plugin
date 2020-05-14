@@ -22,6 +22,7 @@ import mindustry.type.ItemType;
 import java.awt.*;
 import java.io.*;
 import java.util.Arrays;
+import java.util.Objects;
 
 import mindustry.type.UnitType;
 import mindustry.world.blocks.storage.CoreBlock;
@@ -609,8 +610,7 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.register("w-set-rank", "<uuid/name/index> <rank>", "", arg -> {
-
+        handler.register("w-set-rank", "<uuid/name/index> <rank/restart>", "", arg -> {
             PlayerData pd = Database.findData(arg[0]);
             if (pd == null) {
                 Log.info("Player not found.");
@@ -618,11 +618,26 @@ public class Main extends Plugin {
             }
             try {
                 Database.setRank(pd, Rank.valueOf(arg[1]));
+                Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
+                Call.sendMessage("Rank of player [orange]"+ pd.originalName+"[] is now " +pd.rank.getName() +".");
             } catch (IllegalArgumentException e) {
-                Log.info("Rank not found. Ranks:" + Arrays.toString(Rank.values()));
-                return;
+                if(arg[1].equals("restart")) {
+                    pd.specialRank = null;
+                    Call.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] wos restarted.");
+                    Log.info("Rank of player " + pd.originalName + " wos restarted.");
+                }else if(!Database.ranks.containsKey(arg[1])){
+                    Log.info("Rank not found.\nRanks:" + Arrays.toString(Rank.values())+"\n" +
+                            "Custom ranks:"+Database.ranks.keySet());
+                    return;
+                }else {
+                    pd.specialRank=arg[1];
+                    Log.info("Rank of player " + pd.originalName + " is now " + pd.specialRank + ".");
+                    SpecialRank sr=Database.getSpecialRank(pd);
+                    if(sr!=null){
+                        Call.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + sr.getSuffix() + ".");
+                    }
+                }
             }
-            Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
             Player player = findPlayer(arg[0]);
             if (player == null) {
                 player = playerGroup.find(p-> p.uuid.equalsIgnoreCase(arg[0]));
@@ -1010,7 +1025,7 @@ public class Main extends Plugin {
         handler.<Player>register("test","<start/egan/quit/numberOfOption>","Complete the test to " +
                         "become verified player.",(args, player) -> tester.processAnswer(player,args[0]));
 
-        handler.<Player>register("set-rank","<playerName/uuid/ID> <rankName>","Command for admins.",(args,player)->{
+        handler.<Player>register("set-rank","<playerName/uuid/ID> <rank/restart>","Command for admins.",(args,player)->{
             if(!player.isAdmin){
                 player.sendMessage(prefix+"You are not admin.");
                 return;
@@ -1022,23 +1037,39 @@ public class Main extends Plugin {
                 return;
             }
 
+            if(pd==Database.getData(player)){
+                player.sendMessage(prefix+"You cannot change your rank.");
+                return;
+            }
+
             try{
                 Rank rank=Rank.valueOf(args[1]);
                 if (rank.isAdmin){
                     player.sendMessage(prefix+"You cannot use this rank.");
                     return;
                 }
+                player.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + rank.getName() + ".");
                 Database.setRank(pd,rank);
             }catch (IllegalArgumentException e){
-                player.sendMessage(prefix+"Rank not found. Ranks:"+ Arrays.toString(Rank.values()));
-                return;
+                if(args[1].equals("restart")){
+                    pd.specialRank=null;
+                    Call.sendMessage("Rank of player " + pd.originalName + " wos restarted.");
+                } else if(!Database.ranks.containsKey(args[1])){
+                    player.sendMessage(prefix+"Rank not found.\nRanks:" + Arrays.toString(Rank.values())+"\n" +
+                            "Custom ranks:"+Database.ranks.keySet());
+                    return;
+                }else {
+                    pd.specialRank=args[1];
+                    SpecialRank sr=Database.getSpecialRank(pd);
+                    if(sr==null) return;
+                    Call.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + sr.getSuffix() + ".");
+
+                }
             }
 
-            player.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + pd.rank.getName() + ".");
+
             Player p=findPlayer(args[0]);
-            if(p==null){
-                return;
-            }
+            if(p==null)return;
             Database.updateName(p,pd);
         });
 

@@ -1,5 +1,6 @@
 package theWorst;
 
+import arc.math.Mathf;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
@@ -102,13 +103,13 @@ public class Vote implements Interruptible {
     public static int getRequired() {
         int count = 0;
         for(Player p:playerGroup){
-            if(Database.hasPerm(player,Perm.none)) continue;
+            if(Database.hasThisPerm(p,Perm.none)) continue;
             count+=1;
         }
         if (count == 2) {
             return 2;
         }
-        return (int) Math.ceil(count / 2.0);
+        return Mathf.clamp((int) Math.ceil(count / 2.0),1,5);
     }
 
     public void addVote(Player player, String vote) {
@@ -117,26 +118,30 @@ public class Vote implements Interruptible {
             return;
         }
 
-        voted.add(player.con.address);
         if (AntiGriefer.isGriefer(player)){
             AntiGriefer.abuse(player);
             return;
         }
+
+        if(Database.hasThisPerm(player,Perm.none)){
+            player.sendMessage(Main.prefix + "You are AFK you cannot vote.");
+            return;
+        }
+
+        voted.add(player.con.address);
+
         int req=getRequired();
         if (vote.equals("y")) {
             yes += 1;
             if (yes >= req) {
                 close(true);
-                return;
             }
         } else {
             no += 1;
             if (no >= req) {
                 close(false);
-                return;
             }
         }
-        Call.sendMessage(Main.prefix + (getRequired() -yes) + " more votes needed.");
     }
 
     public void close(boolean success) {
@@ -165,6 +170,7 @@ public class Vote implements Interruptible {
     @Override
     public String getHudInfo() {
         if(!voting) return null;
-        return "vote for "+message+" "+String.format("%02d",time)+"s [green]"+yes+" [][scarlet]"+no+"[]";
+        return "vote for "+message+" "+String.format("%02d",time)+"s [green]"+yes+" [][scarlet]"+no+"[] [gray]req "
+                +getRequired();
     }
 }

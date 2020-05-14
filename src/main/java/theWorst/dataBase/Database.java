@@ -1,6 +1,7 @@
 package theWorst.dataBase;
 
 import arc.util.Log;
+import arc.util.Time;
 import arc.util.Timer;
 import mindustry.content.Items;
 import mindustry.entities.type.Player;
@@ -36,11 +37,11 @@ public class Database implements Votable {
                 if(Rank.AFK.condition(pd)){
                     if(pd.rank==Rank.AFK) return;
                     setRank(p,Rank.AFK);
-                    Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] obtained "+Rank.AFK.getName()+" rank.");
+                    Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] became "+Rank.AFK.getName()+".");
                 }else if(pd.rank==Rank.AFK){
-                    Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] lost his "+pd.rank.getName()+" rank.");
+                    Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] is not "+pd.rank.getName()+" anymore.");
                     pd.rank=pd.trueRank;
-                    p.name=pd.originalName+pd.rank.getSuffix();
+                    updateName(p,pd);
                 }
             }
         },0,60);
@@ -174,7 +175,9 @@ public class Database implements Votable {
             if(player==null) return;
         }
         player.name=pd.originalName+pd.rank.getSuffix();
-        player.isAdmin=rank.isAdmin;
+        if(rank.permanent){
+            player.isAdmin=rank.isAdmin;
+        }
     }
 
     public static void setRank(PlayerData pd,Rank rank){
@@ -192,16 +195,17 @@ public class Database implements Votable {
         boolean set=false;
         for(SpecialRank sr:ranks.values()){
             if((sr.stat==stat || stat==null) && sr.condition(pd)){
-                if(pd.specialRank==null || specialRank.value<sr.value){
+                if(specialRank==null || specialRank.value<sr.value){
                     Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] obtained "+sr.getSuffix()+" rank.");
                     pd.specialRank=sr.name;
+                    specialRank=sr;
                     player.name=pd.originalName+sr.getSuffix();
                 }
                 set=true;
             }
         }
-        if(set || pd.specialRank==null || specialRank.stat!=stat)return;
-        Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] lost his "+getSpecialRank(pd).getSuffix()+" rank.");
+        if(set || specialRank==null || specialRank.stat!=stat)return;
+        Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] lost his "+specialRank.getSuffix()+" rank.");
         pd.specialRank=null;
         player.name=pd.originalName+pd.rank.getSuffix();
     }
@@ -216,7 +220,8 @@ public class Database implements Votable {
     }
 
     public static boolean hasThisPerm(Player player,Perm perm){
-        return getData(player).trueRank.permission==perm;
+        PlayerData pd=getData(player);
+        return pd.rank.permission==perm || pd.trueRank.permission==perm;
     }
 
     public static boolean hasSpecialPerm(Player player,Perm perm){
@@ -231,13 +236,19 @@ public class Database implements Votable {
 
     public void onConnect(Player player){
         String uuid=player.uuid;
+        PlayerData pd;
         if(!data.containsKey(uuid)) {
             data.put(uuid,new PlayerData(player));
+            pd=getData(uuid);
+            for(Setting s:Setting.values()){
+                pd.settings.add(s.name());
+            }
+        }else {
+            pd=getData(uuid);
         }
-        PlayerData pd=getData(uuid);
         if(pd==null) return;
         pd.connect(player);
-
+        pd.lastAction= Time.millis();
         if(AntiGriefer.isSubNetBanned(player)){
             setRank(player,Rank.griefer);
         } else {
