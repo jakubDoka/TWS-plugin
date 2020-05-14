@@ -1,37 +1,38 @@
 package theWorst.helpers;
 
 import arc.Events;
-import arc.math.Mathf;
 import arc.struct.Array;
 import arc.util.Log;
+import arc.util.Time;
 import mindustry.Vars;
 import mindustry.entities.type.Player;
-import mindustry.game.EventType;
-import mindustry.game.Gamemode;
-import mindustry.game.Rules;
-import mindustry.game.Team;
+import mindustry.game.*;
 import mindustry.gen.Call;
 import mindustry.maps.Map;
+import theWorst.Hud;
 import theWorst.Main;
 import theWorst.Package;
+import theWorst.dataBase.Database;
 import theWorst.dataBase.PlayerData;
+import theWorst.dataBase.Stat;
 import theWorst.interfaces.Votable;
 
-
 import java.io.*;
-
-import arc.util.Time;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import static mindustry.Vars.*;
 
-public class MapChanger implements Votable {
+public class MapManager implements Votable {
     final String saveFile=Main.directory+"mapData.ser";
-    int pageSize=15;
+    static final int defaultAirWave=1000000;
     public Map currentMap=maps.all().first();
     HashMap<String,mapData> data=new HashMap<>();
 
+    public MapManager(){
+
+        Events.on(EventType.GameOverEvent.class, e -> endGame(e.winner==Team.sharded));
+
+    }
 
     @Override
     public void launch(Package p) {
@@ -139,9 +140,11 @@ public class MapChanger implements Votable {
             return null;
         }
         Rules rules=map.rules();
+        int firstAirWave=data.get(map.name()).firstAirWave;
         return "[orange]--MAP RULES--[]\n\n"+
                 String.format("[gray]name:[] %s\n" +
                         "[gray]mode:[] %s\n" +
+                        "[gray]first air-wave:[] "+(firstAirWave==defaultAirWave ? "none":firstAirWave)+"\n " +
                         "[orange]Multipliers[]\n" +
                         "[gray]build cost:[] %.2f\n"+
                         "[gray]build speed:[] %.2f\n"+
@@ -169,13 +172,14 @@ public class MapChanger implements Votable {
         else {
             data.get(name).started=Time.millis();
         }
-
+        Hud.messages.add(getWaveInfo());
     }
 
     public void endGame(boolean won) {
         if(currentMap==null){
             return;
         }
+        Hud.messages.remove(getWaveInfo());
         mapData md=data.get(currentMap.name());
         md.playtime+=Time.timeSinceMillis(md.started);
         md.timesPlayed++;
@@ -204,6 +208,7 @@ public class MapChanger implements Votable {
         int timesPlayed=0;
         int timesWon=0;
         int waveRecord=0;
+        int firstAirWave=defaultAirWave;
         long started=Time.millis();
         long playtime=0;
         long bornDate=Time.millis();
@@ -213,6 +218,9 @@ public class MapChanger implements Votable {
 
         mapData(Map map){
             name=map.name();
+            for(SpawnGroup sg:map.rules().spawns){
+                if(sg.type.flying && sg.begin<firstAirWave) firstAirWave=sg.begin;
+            }
         };
 
         double getPlayRatio(){
@@ -222,6 +230,7 @@ public class MapChanger implements Votable {
         public String toString(){
             return "[gray]name:[] " + name + "\n" +
                     "[gray]author:[] " + maps.byName(name).author() + "\n" +
+                    "[gray]first air-wave:[] " + (firstAirWave==defaultAirWave ? "none":firstAirWave) + "\n" +
                     "[gray]times played:[] " + timesPlayed + "\n" +
                     "[gray]times won:[] " + timesWon + "\n" +
                     "[gray]wave record:[] " + waveRecord + "\n" +
@@ -240,6 +249,11 @@ public class MapChanger implements Votable {
         }
 
 
+    }
+
+    public String getWaveInfo(){
+        if(data.get(currentMap.name()).firstAirWave==defaultAirWave) return "No air waves on this map.";
+        return "Air enemy starts at [orange]"+data.get(currentMap.name()).firstAirWave+"[] wave!";
     }
 
     public void save() {
@@ -262,13 +276,14 @@ public class MapChanger implements Votable {
             if(obj instanceof HashMap) data = (HashMap<String, mapData>) obj;
             in.close();
             fileIn.close();
+            Log.info("Map data loaded");
         } catch (ClassNotFoundException c) {
             Log.info("class not found");
             c.printStackTrace();
         } catch (FileNotFoundException f){
             Log.info("database no found, creating new");
         }catch (IOException i){
-            Log.info("Database is incompatible with current version.");
+            Log.info("Map database is incompatible with current version.");
         }
     }
 }

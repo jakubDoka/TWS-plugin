@@ -1,6 +1,7 @@
 package theWorst;
 
 import arc.Events;
+import arc.graphics.Color;
 import arc.math.Mathf;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
@@ -18,12 +19,6 @@ import mindustry.plugin.Plugin;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.ItemType;
-
-import java.awt.*;
-import java.io.*;
-import java.util.Arrays;
-import java.util.Objects;
-
 import mindustry.type.UnitType;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
@@ -31,7 +26,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import theWorst.dataBase.*;
 import theWorst.helpers.CoreBuilder;
-import theWorst.helpers.MapChanger;
+import theWorst.helpers.MapManager;
 import theWorst.helpers.Tester;
 import theWorst.helpers.WaveSkipper;
 import theWorst.interfaces.Interruptible;
@@ -42,6 +37,9 @@ import theWorst.requests.Factory;
 import theWorst.requests.Loadout;
 import theWorst.requests.Request;
 import theWorst.requests.Requesting;
+
+import java.io.*;
+import java.util.Arrays;
 
 import static java.lang.Math.*;
 import static mindustry.Vars.*;
@@ -60,21 +58,20 @@ public class Main extends Plugin {
 
     public static Array<Item> items = new Array<>();
     public final int pageSize=15;
-    Array<Interruptible> interruptibles = new Array<>();
+    static Array<Interruptible> interruptibles = new Array<>();
 
     Timer.Task autoSaveThread;
-    Timer.Task updateThread;
 
     int defaultAutoSaveFrequency=5;
 
-    String hudMessage=null;
+    MapManager mapManager;
+    Factory factory;
+    ServerPlayer serverPlayer;
 
     Loadout loadout = new Loadout();
-    Factory factory;
     CoreBuilder builder = new CoreBuilder();
-    MapChanger changer;
     WaveSkipper skipper = new WaveSkipper();
-
+    Hud hud = new Hud();
     Database dataBase=new Database();
     Tester tester =new Tester();
     AntiGriefer antiGriefer=new AntiGriefer();
@@ -82,94 +79,9 @@ public class Main extends Plugin {
     VoteKick voteKick=new VoteKick();
 
     public Main() {
-        Events.on(PlayerJoin.class, e -> dataBase.onConnect(e.player));
-
-        Events.on(PlayerLeave.class,e-> dataBase.onDisconnect(e.player));
-
-        Events.on(GameOverEvent.class, e ->{
-            for(Player p:playerGroup){
-                PlayerData pd=Database.getData(p);
-                if(p.getTeam()==e.winner) {
-                    pd.gamesWon++;
-                    Database.updateRank(p,Stat.gamesWon);
-                }
-                pd.gamesPlayed++;
-                Database.updateRank(p,Stat.gamesPlayed);
-
-            }
-            changer.endGame(e.winner==Team.sharded);
-        });
 
         Events.on(PlayEvent.class, e-> {
-            changer.startGame();
-            skipper.countSpawns();
-        });
-
-        Events.on(WaveEvent.class, e->{
-            String waveInfo=skipper.getWaveInfo();
-            for(Player p:playerGroup){
-                if(Database.hasEnabled(p,Setting.waveInfo)){
-                    p.sendMessage(waveInfo);
-                }
-            }
-        });
-
-        Events.on(BlockBuildEndEvent.class, e->{
-            if(e.player == null) return;
-            if(!e.breaking && e.tile.block().buildCost/60<1) return;
-            PlayerData pd=Database.getData(e.player);
-            if(e.breaking){
-                pd.buildingsBroken++;
-                Database.updateRank(e.player,Stat.buildingsBroken);
-            }else {
-                pd.buildingsBuilt++;
-                Database.updateRank(e.player,Stat.buildingsBuilt);
-            }
-
-        });
-
-        Events.on(BuildSelectEvent.class, e->{
-            if(e.builder instanceof Player){
-                boolean happen =false;
-                Player player=(Player)e.builder;
-                CoreBlock.CoreEntity core=Loadout.getCore(player);
-                if(core==null) return;
-                BuilderTrait.BuildRequest request = player.buildRequest();
-                if(request==null) return;
-                if(Database.hasSpecialPerm(player,Perm.destruct) && request.breaking){
-                    happen=true;
-                    for(ItemStack s:request.block.requirements){
-                        core.items.add(s.item,s.amount/2);
-                    }
-                    Call.onDeconstructFinish(request.tile(),request.block,((Player) e.builder).id);
-
-                }else if(Database.hasSpecialPerm(player,Perm.build) && !request.breaking){
-                    if(core.items.has(request.block.requirements)){
-                        happen=true;
-                        for(ItemStack s:request.block.requirements){
-                            core.items.remove(s);
-                        }
-                        Call.onConstructFinish(e.tile,request.block,((Player) e.builder).id,
-                                (byte) request.rotation,player.getTeam(),false);
-                        e.tile.configure(request.config);
-                    }
-                }
-                if(happen)
-                    Events.fire(new BlockBuildEndEvent(e.tile,player,e.team,e.breaking));
-            }
-        });
-
-        Events.on(EventType.UnitDestroyEvent.class, e->{
-            if(e.unit instanceof Player){
-                Database.getData((Player) e.unit).deaths++;
-                Database.updateRank((Player) e.unit,Stat.deaths);
-            }else if(e.unit.getTeam()==Team.crux){
-                for(Player p:playerGroup){
-                    Database.getData(p).enemiesKilled++;
-                    Database.updateRank(p,Stat.enemiesKilled);
-                }
-            }
-
+            mapManager.startGame();
         });
 
         Events.on(PlayerChatEvent.class, e -> {
@@ -187,7 +99,7 @@ public class Main extends Plugin {
         Events.on(WorldLoadEvent.class, e -> interruptibles.forEach(Interruptible::interrupt));
 
 
-        Events.on(EventType.BuildSelectEvent.class, e -> {
+        Events.on(BuildSelectEvent.class, e -> {
             Array<Request> requests = factory.getRequests();
             if (requests.size > 0) {
                 boolean canPlace = true;
@@ -244,9 +156,10 @@ public class Main extends Plugin {
             });
 
             load_items();
+            serverPlayer = new ServerPlayer();
             factory = new Factory(loadout);
-            changer = new MapChanger();
-            changer.cleanup();
+            mapManager = new MapManager();
+            mapManager.cleanup();
             addToGroups();
             if (!makeDir()) {
                 Log.info("Unable to create directory " + directory + ".");
@@ -256,9 +169,9 @@ public class Main extends Plugin {
             tester.loadQuestions();
             dataBase.loadRanks();
             autoSave(defaultAutoSaveFrequency);
-            updateHud();
+            hud.update();
+            hud.startCycle(10);
         });
-
     }
 
     public static void loadJson(String filename, runLoad load, Runnable save){
@@ -298,6 +211,7 @@ public class Main extends Plugin {
         loadSave.put("loadout", loadout);
         loadSave.put("factory", factory);
         loadSave.put("antiGrifer",antiGriefer);
+        loadSave.put("hud",hud);
         configured.put("loadout", loadout);
         configured.put("factory", factory);
     }
@@ -309,32 +223,6 @@ public class Main extends Plugin {
         long days=hour/24;
         return String.format("%d:%02d:%02d:%02d",
                 days%365,hour%24,min%60,sec%60);
-    }
-
-    public void updateHud(){
-        updateThread=Timer.schedule(()-> {
-            try {
-                StringBuilder b = new StringBuilder();
-                for (Interruptible i : interruptibles) {
-                    String msg = i.getHudInfo();
-                    if (msg == null) continue;
-                    b.append(msg).append("\n");
-                }
-                if(hudMessage!=null){
-                    b.append(hudMessage).append("\n");
-                }
-                for (Player p : playerGroup.all()) {
-                    if (Database.hasEnabled(p,Setting.hud)) {
-                        Call.setHudText(p.con, b.toString().substring(0, b.length() - 1));
-                    } else {
-                        Call.setHudText(p.con, "");
-                    }
-                }
-            }catch (Exception ex){
-                Log.info("something horrible happen");
-            }
-        },0,1);
-
     }
 
     public void load() {
@@ -349,7 +237,7 @@ public class Main extends Plugin {
             loadSave.keys().forEach((k) -> loadSave.get(k).load((JSONObject) data.get(k)));
         },this::save);
         dataBase.load();
-        changer.load();
+        mapManager.load();
     }
 
     public void save() {
@@ -359,7 +247,7 @@ public class Main extends Plugin {
             return saveData;
         });
         dataBase.save();
-        changer.save();
+        mapManager.save();
     }
 
     public void config(){
@@ -468,8 +356,8 @@ public class Main extends Plugin {
     }
 
     public boolean notEnoughArgs(Player p,int amount,String[] args ){
-        if(args.length!=amount){
-            String m="Not enough arguments.";
+        if(args.length<amount){
+            String m="Not enough arguments, expected at least "+amount+".";
             if(p!=null){
                 p.sendMessage(prefix+m);
             }else{
@@ -561,17 +449,60 @@ public class Main extends Plugin {
         handler.removeCommand("say");
         handler.removeCommand("admin");
 
-        handler.register("test", "", arg -> {
-            Log.info(skipper.getWaveInfo());
-        });
+        handler.register("test", "", arg -> {});
 
-        handler.register("w-help","<ranks/factory>","Shows better explanation and more information" +
+        handler.register("w-help","<ranks/factory/hud>","Shows better explanation and more information" +
                 "acout entered topic.",arg->{
             switch (arg[0]){
                 case "ranks":
                     SpecialRank.help();
                 case "factory":
                     Log.info("Missing.");
+                case "hud":
+                    Log.info("Missing.");
+            }
+        });
+
+        handler.register("w-hud","[speed/remove/add] [timeInMin/idx/message...]","Set speed of " +
+                "message cycle, remove messages by index and add messages to cycle. Use /hud to see messages you added."
+                ,arg->{
+            if(arg.length==0){
+
+                StringBuilder b=new StringBuilder();
+                for(int i=0;i<hud.messages.size;i++){
+                    b.append(i).append("-").append(hud.messages.get(i)).append("\n");
+                }
+                Log.info("Message list:\n"+b.toString());
+                return;
+            }
+            if(notEnoughArgs(null,2,arg)) return;
+            switch (arg[0]){
+                case "speed":
+                    if(!Strings.canParseInt(arg[1])){
+                        Log.info("Speed has to be integer.");
+                        return;
+                    }
+                    hud.startCycle(Integer.parseInt(arg[1]));
+                    return;
+                case "remove":
+                    if(!Strings.canParseInt(arg[1])){
+                        Log.info("Index has to be integer.");
+                        return;
+                    }
+                    int val=Integer.parseInt(arg[1]);
+                    if(val>hud.messages.size){
+                        Log.info("too height number, max is"+hud.messages.size+".");
+                        return;
+                    }
+                    hud.messages.remove(val);
+                    hud.messageCycle.run();
+                    return;
+                case "add":
+                    StringBuilder b=new StringBuilder();
+                    for(int i=1;i<arg.length;i++){
+                        b.append(arg[i]);
+                    }
+                    hud.messages.add(b.toString());
             }
         });
 
@@ -684,10 +615,10 @@ public class Main extends Plugin {
             }
         });
 
-        handler.register("w-map-stats","Shows all maps with statistics.",arg-> Log.info(changer.statistics()));
+        handler.register("w-map-stats","Shows all maps with statistics.",arg-> Log.info(mapManager.statistics()));
 
         handler.register("w-map-cleanup","Removes data about already removed maps.",arg->{
-            changer.cleanup();
+            mapManager.cleanup();
             Log.info("Data removed");
         });
 
@@ -740,20 +671,6 @@ public class Main extends Plugin {
             }
             autoSave(frequency);
         });
-        handler.register("w-set-hud-message","[message...]","sets hud message that everyone sees " +
-                "or disables it when no arg is provided,you don t have to use underscores.",args->{
-            if(args.length==0){
-                hudMessage=null;
-                Log.info("Hud message disabled.");
-                return;
-            }
-            StringBuilder b=new StringBuilder();
-            for(String s:args){
-                b.append(s).append(" ");
-            }
-            hudMessage=b.toString();
-            Log.info("Hud message set.");
-        });
     }
 
     @Override
@@ -790,8 +707,8 @@ public class Main extends Plugin {
             Integer page;
             if(arg.length>0){
                 if(arg[0].equals("info") || arg[0].equals("rules")){
-                    String stats=arg[0].equals("rules") ? changer.getMapRules(arg.length==2 ? arg[1]:null):
-                            changer.getMapStats(arg.length==2 ? arg[1]:null);
+                    String stats=arg[0].equals("rules") ? mapManager.getMapRules(arg.length==2 ? arg[1]:null):
+                            mapManager.getMapStats(arg.length==2 ? arg[1]:null);
                     if(stats==null){
                         player.sendMessage(prefix+"Map not found.");
                         return;
@@ -804,7 +721,7 @@ public class Main extends Plugin {
                     Integer rating=processArg(player,"rating",arg[1]);
                     if(rating==null) return;
                     rating= Mathf.clamp(rating,1,10);
-                    changer.rate(player,rating);
+                    mapManager.rate(player,rating);
                     return;
                 }
                 page=processArg(player,"Page",arg[0]);
@@ -812,7 +729,7 @@ public class Main extends Plugin {
             }else {
                 page=1;
             }
-            Call.onInfoMessage(player.con,formPage(changer.info(),page,"mpa list",pageSize));
+            Call.onInfoMessage(player.con,formPage(mapManager.info(),page,"mpa list",pageSize));
         });
 
         handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
@@ -897,10 +814,10 @@ public class Main extends Plugin {
             String secArg = arg.length == 2 ? arg[1] : "0";
             switch (arg[0]) {
                 case "map":
-                    p = changer.verify(player, secArg, 0, false);
+                    p = mapManager.verify(player, secArg, 0, false);
                     if (p == null) return;
 
-                    vote.aVote(changer, p, "changing map to " + ((mindustry.maps.Map)p.obj).name());
+                    vote.aVote(mapManager, p, "changing map to " + ((mindustry.maps.Map)p.obj).name());
                     return;
                 case "skipwave":
                     Integer amount=processArg(player,"Wave amount",secArg);
@@ -910,11 +827,11 @@ public class Main extends Plugin {
                     vote.aVote(skipper, p, "skipping " + p.amount + " waves");
                     return;
                 case "restart":
-                    vote.aVote(changer, new Package(null ,world.getMap(), player),
+                    vote.aVote(mapManager, new Package(null ,world.getMap(), player),
                             "restart the game");
                     return;
                 case "gameover":
-                    vote.aVote(changer, new Package(null ,null, player),
+                    vote.aVote(mapManager, new Package(null ,null, player),
                             "gameover.");
                     return;
                 case "kickAllAfk":
@@ -1053,7 +970,7 @@ public class Main extends Plugin {
             }catch (IllegalArgumentException e){
                 if(args[1].equals("restart")){
                     pd.specialRank=null;
-                    Call.sendMessage("Rank of player " + pd.originalName + " wos restarted.");
+                    Call.sendMessage("Rank of player [orange]" + pd.originalName + "[] wos restarted.");
                 } else if(!Database.ranks.containsKey(args[1])){
                     player.sendMessage(prefix+"Rank not found.\nRanks:" + Arrays.toString(Rank.values())+"\n" +
                             "Custom ranks:"+Database.ranks.keySet());

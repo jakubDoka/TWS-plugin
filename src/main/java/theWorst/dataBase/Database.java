@@ -1,12 +1,19 @@
 package theWorst.dataBase;
 
+import arc.Events;
 import arc.util.Log;
 import arc.util.Time;
 import arc.util.Timer;
 import mindustry.content.Items;
+import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.Player;
+import mindustry.game.EventType;
+import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.net.Administration;
+import mindustry.type.ItemStack;
+import mindustry.world.blocks.storage.CoreBlock;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import theWorst.AntiGriefer;
 import theWorst.Main;
@@ -15,6 +22,7 @@ import java.io.*;
 import arc.struct.Array;
 import theWorst.Package;
 import theWorst.interfaces.Votable;
+import theWorst.requests.Loadout;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,13 +39,114 @@ public class Database implements Votable {
     public Timer.Task afkThread;
 
     public Database(){
+
+        Events.on(EventType.GameOverEvent.class, e ->{
+            for(Player p:playerGroup){
+                PlayerData pd=getData(p);
+                if(p.getTeam()==e.winner) {
+                    pd.gamesWon++;
+                    updateRank(p,Stat.gamesWon);
+                }
+                pd.gamesPlayed++;
+                updateRank(p,Stat.gamesPlayed);
+            }
+        });
+
+        Events.on(EventType.BuildSelectEvent.class, e->{
+            if(e.builder instanceof Player){
+                boolean happen =false;
+                Player player=(Player)e.builder;
+                CoreBlock.CoreEntity core= Loadout.getCore(player);
+                if(core==null) return;
+                BuilderTrait.BuildRequest request = player.buildRequest();
+                if(request==null) return;
+                if(hasSpecialPerm(player,Perm.destruct) && request.breaking){
+                    happen=true;
+                    for(ItemStack s:request.block.requirements){
+                        core.items.add(s.item,s.amount/2);
+                    }
+                    Call.onDeconstructFinish(request.tile(),request.block,((Player) e.builder).id);
+
+                }else if(hasSpecialPerm(player,Perm.build) && !request.breaking){
+                    if(core.items.has(request.block.requirements)){
+                        happen=true;
+                        for(ItemStack s:request.block.requirements){
+                            core.items.remove(s);
+                        }
+                        Call.onConstructFinish(e.tile,request.block,((Player) e.builder).id,
+                                (byte) request.rotation,player.getTeam(),false);
+                        e.tile.configure(request.config);
+                    }
+                }
+                if(happen)
+                    Events.fire(new EventType.BlockBuildEndEvent(e.tile,player,e.team,e.breaking));
+            }
+        });
+
+        Events.on(EventType.UnitDestroyEvent.class, e->{
+            if(e.unit instanceof Player){
+                getData((Player) e.unit).deaths++;
+                updateRank((Player) e.unit,Stat.deaths);
+            }else if(e.unit.getTeam()== Team.crux){
+                for(Player p:playerGroup){
+                    getData(p).enemiesKilled++;
+                    updateRank(p,Stat.enemiesKilled);
+                }
+            }
+        });
+
+        Events.on(EventType.BlockBuildEndEvent.class, e->{
+            if(e.player == null) return;
+            if(!e.breaking && e.tile.block().buildCost/60<1) return;
+            PlayerData pd=getData(e.player);
+            if(e.breaking){
+                pd.buildingsBroken++;
+                updateRank(e.player,Stat.buildingsBroken);
+            }else {
+                pd.buildingsBuilt++;
+                updateRank(e.player,Stat.buildingsBuilt);
+            }
+        });
+
+        Events.on(EventType.PlayerJoin.class, e -> {  String uuid=player.uuid;
+            PlayerData pd;
+            Player player=e.player;
+            if(!data.containsKey(uuid)) {
+                data.put(uuid,new PlayerData(player));
+                pd=getData(uuid);
+                for(Setting s:Setting.values()){
+                    pd.settings.add(s.name());
+                }
+            }else {
+                pd=getData(uuid);
+            }
+            if(pd==null) return;
+            pd.connect(player);
+            pd.lastAction= Time.millis();
+            if(pd.rank==Rank.AFK){
+                pd.rank=pd.trueRank;
+            }
+            if(AntiGriefer.isSubNetBanned(player)){
+                setRank(player,Rank.griefer);
+            } else {
+                updateRank(player,null);
+                updateName(player,pd);
+            }
+
+            player.isAdmin=pd.trueRank.isAdmin;
+        });
+
+        Events.on(EventType.PlayerLeave.class, e->{
+            getData(e.player).disconnect();
+        });
+
         afkThread=Timer.schedule(()->{
             for(Player p:playerGroup){
                 PlayerData pd=getData(p);
                 if(Rank.AFK.condition(pd)){
                     if(pd.rank==Rank.AFK) return;
-                    setRank(p,Rank.AFK);
                     Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] became "+Rank.AFK.getName()+".");
+                    setRank(p,Rank.AFK);
                 }else if(pd.rank==Rank.AFK){
                     Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] is not "+pd.rank.getName()+" anymore.");
                     pd.rank=pd.trueRank;
@@ -67,6 +176,7 @@ public class Database implements Votable {
             if(obj instanceof HashMap) data = (HashMap<String, PlayerData>) obj;
             in.close();
             fileIn.close();
+            Log.info("Database loaded.");
         } catch (ClassNotFoundException c) {
             Log.info("class not found");
             c.printStackTrace();
@@ -234,41 +344,12 @@ public class Database implements Votable {
         player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix(): Objects.requireNonNull(getSpecialRank(pd)).getSuffix());
     }
 
-    public void onConnect(Player player){
-        String uuid=player.uuid;
-        PlayerData pd;
-        if(!data.containsKey(uuid)) {
-            data.put(uuid,new PlayerData(player));
-            pd=getData(uuid);
-            for(Setting s:Setting.values()){
-                pd.settings.add(s.name());
-            }
-        }else {
-            pd=getData(uuid);
-        }
-        if(pd==null) return;
-        pd.connect(player);
-        pd.lastAction= Time.millis();
-        if(AntiGriefer.isSubNetBanned(player)){
-            setRank(player,Rank.griefer);
-        } else {
-            updateRank(player,null);
-            updateName(player,pd);
-        }
-
-        player.isAdmin=pd.trueRank.isAdmin;
-    }
-
-    public void onDisconnect(Player player) {
-        getData(player).disconnect();
-    }
-
     public void loadRanks(){
         Main.loadJson(rankFile,(data)->{
             ranks.clear();
             for(Object o:data.keySet()){
                 String key=(String)o;
-                ranks.put(key,new SpecialRank(key,(JSONObject) data.get(key)));
+                ranks.put(key,new SpecialRank(key,(JSONObject) data.get(key),data));
             }
         },this::createDefaultRankConfig);
     }
@@ -290,15 +371,15 @@ public class Database implements Votable {
                             "to use suicide command.");
                     data.put("kamikaze",rank);
                     rank=new JSONObject();
-                    rank.put("comment","This rank can be only obtained by having total count of buildingsBuilt 5000 and" +
-                            "average build rate per hour 300.Build rate calculation: buildingsBuilt/playTime_in_hours");
+                    rank.put("comment","This rank can be only obtained by having total count of buildingsBuilt 5 and" +
+                            "average build rate per hour 3.Build rate calculation: buildingsBuilt/playTime_in_hours");
                     rank.put("permission",Perm.build.name());
                     rank.put("tracked",Stat.buildingsBuilt.name());
                     rank.put("mode",SpecialRank.Mode.reqFreq.name());
                     rank.put("value",2);
                     rank.put("color","#"+ Items.plastanium.color);
-                    rank.put("frequency",300);
-                    rank.put("requirement",5000);
+                    rank.put("frequency",3);
+                    rank.put("requirement",5);
                     rank.put("description","If you build a lot you will obtain this rank.When i mean a lot i mean a [red]LOT[].");
                     data.put("builder",rank);
                     rank=new JSONObject();
@@ -309,6 +390,23 @@ public class Database implements Votable {
                     rank.put("value",3);
                     rank.put("description","It depends on how annoying you are to server owner.");
                     data.put("KID",rank);
+                    rank=new JSONObject();
+                    rank.put("comment","This rank can e only given by command and will stay until the condition of" +
+                            "rank with higher value is met or rank is set to none.");
+                    rank.put("permanent",false);
+                    JSONArray perms =new JSONArray();
+                    perms.add(Perm.build.name());
+                    perms.add(Perm.destruct.name());
+                    rank.put("permission",perms);
+                    JSONArray linked =new JSONArray();
+                    perms.add("builder");
+                    perms.add("kamikaze");
+                    rank.put("linked",linked);
+                    rank.put("mode",SpecialRank.Mode.merge.name());
+                    rank.put("color","#"+Items.pyratite.color);
+                    rank.put("value",6);
+                    rank.put("description","If you protect everything you built with your own body you ll get this rank");
+                    data.put("suicidalBuilder",rank);
                     return data;
                 });
     }

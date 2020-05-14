@@ -2,6 +2,7 @@ package theWorst.dataBase;
 
 import arc.struct.Array;
 import arc.util.Log;
+import arc.util.serialization.Jval;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -11,6 +12,7 @@ import java.io.Serializable;
 public class SpecialRank implements Serializable {
     String name;
     Array<Perm> permissions=new Array<>(new Perm[]{Perm.normal});
+    Array<String> linked=new Array<>();
     Stat stat=Stat.none;
     Mode mode=Mode.none;
     String color="";
@@ -20,7 +22,7 @@ public class SpecialRank implements Serializable {
     int req=0;
     int freq=0;
 
-    public SpecialRank(String name,JSONObject obj){
+    public SpecialRank(String name,JSONObject obj,JSONObject all){
         this.name=name;
         try {
             if(obj.containsKey("permission")){
@@ -32,6 +34,12 @@ public class SpecialRank implements Serializable {
                     for(Object o:(JSONArray)data){
                         permissions.add(Perm.valueOf((String)o));
                     }
+                }
+            }
+            if(obj.containsKey("linked")){
+                for(Object o:(Jval.JsonArray)obj.get("linked")){
+                    if(!all.containsKey(o)) continue;
+                    linked.add((String)o);
                 }
             }
             if(obj.containsKey("tracked")) stat=Stat.valueOf((String)obj.get("tracked"));
@@ -66,6 +74,11 @@ public class SpecialRank implements Serializable {
                 return val>=req;
             case reqFreq:
                 return val>=req && val/((tested.playTime+1)/(1000*60*60f))>=freq;
+            case merge:
+                for(String s:linked){
+                    if(!Database.ranks.get(s).condition(tested)) return false;
+                }
+                return true;
             default:
                 return false;
         }
@@ -85,6 +98,10 @@ public class SpecialRank implements Serializable {
         }},
         req{{
             description="If tracked of the player has same or higher value then requirement he will obtain the rank";
+        }},
+        merge{{
+            description="If condition of all liked ranks is met player will obtain this rank. " +
+                    "WARMING: i greatly recommend testing if everything is OK before before using it for real.";
         }},
         none;
         public String description=null;
@@ -124,6 +141,8 @@ public class SpecialRank implements Serializable {
                 "Color just makes rank displayed in different color. There are two ways to define " +
                 "color both shown in generated file.\n" +
                 "Permanent determinate weather the rank is achievable or settable only by command." +
-                "it will not go evey unit you reset players rank or some achievable rank with higher value surpasses it.");
+                "it will not go evey unit you reset players rank or some achievable rank with higher value surpasses it.\n"+
+                "Linked is used with merge setting you can put names of other ranks here and if condition of this ranks" +
+                "are med simultaneously player will obtain this rank");
     }
 }
