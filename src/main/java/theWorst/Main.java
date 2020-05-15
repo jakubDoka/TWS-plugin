@@ -502,7 +502,7 @@ public class Main extends Plugin {
                         return;
                     }
 
-                    if(val>hud.messages.size){
+                    if(val>=hud.messages.size){
                         Log.info("Too height number, max is "+hud.messages.size+".");
                         return;
                     }
