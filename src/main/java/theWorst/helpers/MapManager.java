@@ -12,9 +12,6 @@ import mindustry.maps.Map;
 import theWorst.Hud;
 import theWorst.Main;
 import theWorst.Package;
-import theWorst.dataBase.Database;
-import theWorst.dataBase.PlayerData;
-import theWorst.dataBase.Stat;
 import theWorst.interfaces.Votable;
 
 import java.io.*;
@@ -32,6 +29,15 @@ public class MapManager implements Votable {
 
         Events.on(EventType.GameOverEvent.class, e -> endGame(e.winner==Team.sharded));
 
+        Events.on(EventType.PlayEvent.class, e-> {
+            currentMap=world.getMap();
+            String name=currentMap.name();
+            if(!data.containsKey(name)) data.put(name,new mapData(currentMap));
+            else {
+                data.get(name).started=Time.millis();
+            }
+            Hud.addAd(getWaveInfo(),30);
+        });
     }
 
     @Override
@@ -165,21 +171,12 @@ public class MapManager implements Votable {
                 rules.playerHealthMultiplier);
     }
 
-    public void startGame() {
-        currentMap=world.getMap();
-        String name=currentMap.name();
-        if(!data.containsKey(name)) data.put(name,new mapData(currentMap));
-        else {
-            data.get(name).started=Time.millis();
-        }
-        Hud.messages.add(getWaveInfo());
-    }
+
 
     public void endGame(boolean won) {
         if(currentMap==null){
             return;
         }
-        Hud.messages.remove(getWaveInfo());
         mapData md=data.get(currentMap.name());
         md.playtime+=Time.timeSinceMillis(md.started);
         md.timesPlayed++;
@@ -221,7 +218,7 @@ public class MapManager implements Votable {
             for(SpawnGroup sg:map.rules().spawns){
                 if(sg.type.flying && sg.begin<firstAirWave) firstAirWave=sg.begin;
             }
-        };
+        }
 
         double getPlayRatio(){
             return (playtime-timesPlayed*1000*60*5)/(double)Time.timeSinceMillis(bornDate);
@@ -253,7 +250,7 @@ public class MapManager implements Votable {
 
     public String getWaveInfo(){
         if(data.get(currentMap.name()).firstAirWave==defaultAirWave) return "No air waves on this map.";
-        return "Air enemy starts at [orange]"+data.get(currentMap.name()).firstAirWave+"[] wave!";
+        return "Air enemy starts at wave [orange]"+data.get(currentMap.name()).firstAirWave+"[] !";
     }
 
     public void save() {

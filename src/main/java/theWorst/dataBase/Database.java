@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.Objects;
 
 import static mindustry.Vars.*;
-import static mindustry.Vars.netServer;
 
 public class Database implements Votable {
     static HashMap<String,PlayerData> data=new HashMap<>();
@@ -108,9 +107,10 @@ public class Database implements Votable {
             }
         });
 
-        Events.on(EventType.PlayerJoin.class, e -> {  String uuid=player.uuid;
+        Events.on(EventType.PlayerJoin.class, e -> {
             PlayerData pd;
             Player player=e.player;
+            String uuid=player.uuid;
             if(!data.containsKey(uuid)) {
                 data.put(uuid,new PlayerData(player));
                 pd=getData(uuid);
@@ -123,6 +123,9 @@ public class Database implements Votable {
             if(pd==null) return;
             pd.connect(player);
             pd.lastAction= Time.millis();
+            if(player.isLocal){
+                pd.trueRank=Rank.server;
+            }
             if(pd.rank==Rank.AFK){
                 pd.rank=pd.trueRank;
             }

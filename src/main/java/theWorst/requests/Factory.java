@@ -201,11 +201,6 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             }
             p= new theWorst.Package(object, amount, true, player, x, y);
         }
-        if(Database.hasSpecialPerm(player, Perm.factory)){
-            launch(p);
-            Call.sendMessage(Main.prefix+player.name+" just used factory.");
-            return null;
-        }
         return p;
     }
 

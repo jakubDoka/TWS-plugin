@@ -140,13 +140,7 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
             player.sendMessage(Main.prefix + "Nothing to transport.");
             return null;
         }
-        Package p=new Package(object, amount, toBase, player);
-        if(Database.hasSpecialPerm(player, Perm.loadout)){
-            launch(p);
-            Call.sendMessage(Main.prefix+player.name+" just used loadout.");
-            return null;
-        }
-        return p;
+        return new Package(object, amount, toBase, player);
     }
 
     public static CoreBlock.CoreEntity getCore(Player p) {

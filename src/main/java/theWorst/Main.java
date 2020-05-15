@@ -80,9 +80,7 @@ public class Main extends Plugin {
 
     public Main() {
 
-        Events.on(PlayEvent.class, e-> {
-            mapManager.startGame();
-        });
+
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
@@ -449,7 +447,10 @@ public class Main extends Plugin {
         handler.removeCommand("say");
         handler.removeCommand("admin");
 
-        handler.register("test", "", arg -> {});
+        handler.register("test", "", arg -> {
+            Hud.addAd("brah",10);
+            Log.info("brah");
+        });
 
         handler.register("w-help","<ranks/factory/hud>","Shows better explanation and more information" +
                 "acout entered topic.",arg->{
@@ -463,7 +464,7 @@ public class Main extends Plugin {
             }
         });
 
-        handler.register("w-hud","[speed/remove/add] [timeInMin/idx/message...]","Set speed of " +
+        handler.register("w-hud","[speed/remove/add] [timeInMin/idx/all/message...]","Set speed of " +
                 "message cycle, remove messages by index and add messages to cycle. Use /hud to see messages you added."
                 ,arg->{
             if(arg.length==0){
@@ -472,7 +473,7 @@ public class Main extends Plugin {
                 for(int i=0;i<hud.messages.size;i++){
                     b.append(i).append("-").append(hud.messages.get(i)).append("\n");
                 }
-                Log.info("Message list:\n"+b.toString());
+                Log.info("Message will change every "+hud.speed+"min, messages are:\n"+b.toString()+"");
                 return;
             }
             if(notEnoughArgs(null,2,arg)) return;
@@ -483,18 +484,30 @@ public class Main extends Plugin {
                         return;
                     }
                     hud.startCycle(Integer.parseInt(arg[1]));
+                    Log.info("Speed changed.");
                     return;
                 case "remove":
+                    if(arg[1].equals("all")){
+                        hud.messages.clear();
+                        Log.info("All erased.");
+                    }
                     if(!Strings.canParseInt(arg[1])){
                         Log.info("Index has to be integer.");
                         return;
                     }
                     int val=Integer.parseInt(arg[1]);
-                    if(val>hud.messages.size){
-                        Log.info("too height number, max is"+hud.messages.size+".");
+
+                    if(hud.messages.isEmpty()){
+                        Log.info("No messages to erase.");
                         return;
                     }
-                    hud.messages.remove(val);
+
+                    if(val>hud.messages.size){
+                        Log.info("Too height number, max is "+hud.messages.size+".");
+                        return;
+                    }
+
+                    Log.info("Message \""+hud.messages.remove(val)+"\" wos erased.");
                     hud.messageCycle.run();
                     return;
                 case "add":
@@ -503,6 +516,7 @@ public class Main extends Plugin {
                         b.append(arg[i]);
                     }
                     hud.messages.add(b.toString());
+                    Log.info("Message \""+ b.toString()+"\" wos added.");
             }
         });
 
@@ -801,7 +815,7 @@ public class Main extends Plugin {
             Package p = builder.verify(player, arg[0], 0, true);
             if (p == null) return;
 
-            vote.aVote(builder, p, "building " + arg[0] + " core");
+            vote.aVote(builder, p, "building " + arg[0] + " core at "+p.x+" "+p.y);
         });
 
         handler.<Player>register("vote", "<map/skipwave/restart/gameover/kickAllAfk/y/n> [indexOrName/waveAmount]", "Opens vote session or votes in case of votekick.",

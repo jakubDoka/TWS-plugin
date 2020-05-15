@@ -8,6 +8,8 @@ import theWorst.dataBase.Database;
 import theWorst.dataBase.Perm;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Votable;
+import theWorst.requests.Factory;
+import theWorst.requests.Loadout;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,8 +39,12 @@ public class Vote implements Interruptible {
 
     public void aVote(Votable votable, Package aPackage, String message) {
         Player requester=aPackage.target;
-        if(Database.hasPerm(requester, Perm.highest)){
+        if(Database.hasPerm(requester, Perm.highest) ||
+                (votable instanceof Factory && Database.hasSpecialPerm(requester,Perm.factory))
+                || (votable instanceof Loadout && Database.hasSpecialPerm(requester,Perm.loadout))){
+
             votable.launch(aPackage);
+            Hud.addAd(requester.name+" just did "+message,10,new String[]{"gray","green"});
             return;
         }
         if (voting) {
