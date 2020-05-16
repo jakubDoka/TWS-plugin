@@ -16,6 +16,7 @@ import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import theWorst.AntiGriefer;
+import theWorst.Hud;
 import theWorst.Main;
 
 import java.io.*;
@@ -113,6 +114,7 @@ public class Database implements Votable {
             String uuid=player.uuid;
             if(!data.containsKey(uuid)) {
                 data.put(uuid,new PlayerData(player));
+                Hud.addAd("We have a newcomer [orange]"+player.name+"[].",30);
                 pd=getData(uuid);
                 for(Setting s:Setting.values()){
                     pd.settings.add(s.name());
@@ -135,7 +137,6 @@ public class Database implements Votable {
                 updateRank(player,null);
                 updateName(player,pd);
             }
-
             player.isAdmin=pd.trueRank.isAdmin;
         });
 
@@ -344,7 +345,7 @@ public class Database implements Votable {
     }
 
     public static void updateName(Player player,PlayerData pd){
-        player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix(): Objects.requireNonNull(getSpecialRank(pd)).getSuffix());
+        player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix(): getSpecialRank(pd).getSuffix());
     }
 
     public void loadRanks(){

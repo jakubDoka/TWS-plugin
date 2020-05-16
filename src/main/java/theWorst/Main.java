@@ -818,7 +818,7 @@ public class Main extends Plugin {
             vote.aVote(builder, p, "building " + arg[0] + " core at "+p.x+" "+p.y);
         });
 
-        handler.<Player>register("vote", "<map/skipwave/restart/gameover/kickAllAfk/y/n> [indexOrName/waveAmount]", "Opens vote session or votes in case of votekick.",
+        handler.<Player>register("vote", "<map/skipwave/restart/gameover/kickallafk/y/n> [indexOrName/waveAmount]", "Opens vote session or votes in case of votekick.",
                 (arg, player) -> {
             if(Database.getData(player).rank==Rank.AFK){
                 player.sendMessage(prefix+"You are AFK vote isn t enabled for you.");
@@ -848,7 +848,7 @@ public class Main extends Plugin {
                     vote.aVote(mapManager, new Package(null ,null, player),
                             "gameover.");
                     return;
-                case "kickAllAfk":
+                case "kickallafk":
                     vote.aVote(dataBase,new Package(null,null ,player),"kick all afk players");
                 case "y":
                     voteKick.vote(player,1);

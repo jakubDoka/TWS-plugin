@@ -177,6 +177,6 @@ public class Vote implements Interruptible {
     public String getHudInfo() {
         if(!voting) return null;
         return "vote for "+message+" "+String.format("%02d",time)+"s [green]"+yes+" [][scarlet]"+no+"[] [gray]req "
-                +getRequired();
+                +getRequired()+"[]";
     }
 }
