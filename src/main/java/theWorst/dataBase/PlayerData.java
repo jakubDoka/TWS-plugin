@@ -17,24 +17,24 @@ public class PlayerData implements Cloneable, Serializable {
     public Rank rank = Rank.newcomer;
     public Rank trueRank = Rank.newcomer;
     public String specialRank=null;
-    public int serverId;
-    public int playTime = 1;
-    public int buildingsBuilt = 0;
-    public int buildingsBroken = 0;
-    public int enemiesKilled = 0;
-    public int deaths = 0;
-    public int gamesPlayed = 0;
-    public int gamesWon = 0;
-    public int factoryVotes =0;
-    public int loadoutVotes =0;
-    public int messageCount =0;
+    public long serverId;
+    public long buildingsBuilt = 0;
+    public long buildingsBroken = 0;
+    public long enemiesKilled = 0;
+    public long deaths = 0;
+    public long gamesPlayed = 0;
+    public long gamesWon = 0;
+    public long factoryVotes =0;
+    public long loadoutVotes =0;
+    public long messageCount =0;
+    public long playTime = 1;
     public long born = Time.millis();
     public long connected = 0;
     public long lastMessage = 0;
     public long lastActive;
     public long lastAction = Time.millis();
-    public boolean banned = false;
     public long bannedUntil = 0;
+    public boolean banned = false;
     public String banReason = "";
     public String originalName = "";
     public String textColor = "white";
@@ -64,6 +64,7 @@ public class PlayerData implements Cloneable, Serializable {
                 "[gray]special rank:[] " + special + "\n" +
                 "[gray]playtime:[] " + Main.milsToTime(playTime) + "\n" +
                 "[gray]server age[]: " + Main.milsToTime(Time.timeSinceMillis(born)) + "\n" +
+                "[gray]messages sent[]:" + messageCount + "\n" +
                 activity + "\n" +
                 "[gray]games played:[] " + gamesPlayed + "\n" +
                 "[gray]games won:[] " + gamesWon + "\n" +
@@ -73,16 +74,6 @@ public class PlayerData implements Cloneable, Serializable {
                 "[gray]successful factory votes:[] " +factoryVotes+"\n" +
                 "[gray]enemies killed:[] " + enemiesKilled + "\n" +
                 "[gray]deaths:[] " + deaths;
-    }
-
-    public String socialStatus(){
-        Administration.PlayerInfo info = getInfo();
-        long kickTime=info.lastKicked-Time.millis();
-        return "[gray][orange]--SOCIAL STATUS--[]\n\n"+
-                (info.banned ? "[scarlet]BANNED[]":"[green]NOT BANNED[]") +
-                "kicked [white]"+info.timesKicked+"[] times" +
-                (info.admin ? "[yellow]ADMIN[]":"NOT ADMIN") +
-                (kickTime>0 ? "[scarlet]kick ends after " + Main.milsToTime(kickTime) + "[]":"not kicked");
     }
 
     public Administration.PlayerInfo getInfo(){
