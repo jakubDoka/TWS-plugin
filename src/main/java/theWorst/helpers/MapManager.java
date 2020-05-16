@@ -178,6 +178,7 @@ public class MapManager implements Votable {
             return;
         }
         mapData md=data.get(currentMap.name());
+        if(md==null) return;
         md.playtime+=Time.timeSinceMillis(md.started);
         md.timesPlayed++;
         if(won) md.timesWon++;

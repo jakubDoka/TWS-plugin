@@ -74,6 +74,7 @@ public class Hud implements LoadSave {
                     b.append(ad.getMessage()).append("\n");
                 }
                 for (Player p : playerGroup.all()) {
+                    if(p==null) return;
                     if (Database.hasEnabled(p, Setting.hud)) {
                         Call.setHudText(p.con, b.toString().substring(0, b.length() - 1));
                     } else {
@@ -83,7 +84,6 @@ public class Hud implements LoadSave {
 
             }catch (Exception ex){
                 Log.info("something horrible happen");
-                ex.printStackTrace();
             }
         },0,1);
     }
