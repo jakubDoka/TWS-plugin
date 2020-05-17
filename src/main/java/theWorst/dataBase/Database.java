@@ -160,6 +160,28 @@ public class Database implements Votable {
         },0,60);
     }
 
+    public static Array<String> getSorted(String s) {
+        Array<String> res=new Array<>();
+        try {
+            Stat stat=Stat.valueOf(s);
+            Array<PlayerData> dt=Array.with(data.values());
+
+            while(!dt.isEmpty()){
+                PlayerData best=dt.first();
+                for(int i=1;i<dt.size;i++){
+                    if(best.getStat(stat)<dt.get(i).getStat(stat)){
+                        best=dt.get(i);
+                    }
+                }
+                dt.remove(best);
+                res.add(formLine(best));
+            }
+            return res;
+        } catch (IllegalArgumentException ex){
+            return null;
+        }
+    }
+
     public void save() {
         try {
             FileOutputStream fileOut = new FileOutputStream(saveFile);
@@ -258,6 +280,20 @@ public class Database implements Votable {
         return res;
     }
 
+    public static Array<String> getAllChinesePlayersIndexes(){
+        Array<String> res=new Array<>();
+        for(String uuid:data.keySet()){
+            PlayerData pd=getData(uuid);
+            for (int i = 0; i < pd.originalName.length(); i++){
+                if(isCharCJK(pd.originalName.charAt(i))){
+                    res.add(formLine(pd));
+                    break;
+                }
+            }
+        }
+        return res;
+    }
+
     public static Array<String> getRankInfo(){
         Array<String> res=new Array<>();
         for(SpecialRank sr:ranks.values()){
@@ -346,6 +382,20 @@ public class Database implements Votable {
 
     public static void updateName(Player player,PlayerData pd){
         player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix(): getSpecialRank(pd).getSuffix());
+    }
+
+    private static boolean isCharCJK(final char c) {
+        if ((Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS)
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A)
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B)
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_COMPATIBILITY_FORMS)
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS)
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_RADICALS_SUPPLEMENT)
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION)
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.ENCLOSED_CJK_LETTERS_AND_MONTHS)) {
+            return true;
+        }
+        return false;
     }
 
     public void loadRanks(){

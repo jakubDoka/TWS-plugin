@@ -895,7 +895,43 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.<Player>register("info","[name/ID|list/online/ranks] [page]","Displays info about you or another player.",
+        handler.<Player>register("search","<searchKey/chinese/sort/online> [sortType]",
+                "search for player by name or display all chinese players, or display all online players " +
+                        "or display list sorted",(arg,player)->{
+            Array<String> res;
+            if (arg.length==1){
+                switch (arg[0]) {
+                    case "sort":
+                        player.sendMessage(prefix+"Available sort types: "+ Arrays.toString(Stat.values()));
+                        return;
+                    case "chinese":
+                        res = Database.getAllChinesePlayersIndexes();
+                        break;
+                    case "online":
+                        res = Database.getOnlinePlayersIndexes();
+                        break;
+                    default:
+                        res = Database.getAllPlayersIndexes(arg[0]);
+
+                        break;
+                }
+            } else {
+                res=Database.getSorted(arg[1]);
+                if(res==null){
+                    player.sendMessage(prefix+"Invalid sort type, for list of available see /search sort");
+                    return;
+                }
+            }
+            for(String s:res){
+                player.sendMessage(s);
+            }
+            if(res.isEmpty()){
+                player.sendMessage(prefix+"No results found.");
+            }
+
+        });
+
+        handler.<Player>register("info","[name/ID|list/ranks] [page] ","Displays info about you or another player.",
                 (arg,player)-> {
             if(arg.length>=1){
                 Integer page=1;
@@ -903,10 +939,8 @@ public class Main extends Plugin {
                     page=processArg(player,"Page",arg[1]);
                     if(page==null)return;
                 }
-                if(arg[0].equals("list") || arg[0].equals("online")){
-
-                    Call.onInfoMessage(player.con, formPage(
-                            arg[0].equals("list") ? Database.getAllPlayersIndexes(null):Database.getOnlinePlayersIndexes(),
+                if(arg[0].equals("list")){
+                    Call.onInfoMessage(player.con, formPage(Database.getAllPlayersIndexes(null),
                             page, "player list",pageSize));
                     return;
                 }
