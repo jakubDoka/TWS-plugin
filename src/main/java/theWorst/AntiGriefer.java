@@ -165,7 +165,7 @@ public class AntiGriefer implements Votable, Interruptible,LoadSave{
                 restart();
             }else {
                 Call.sendMessage(Main.prefix+"[scarlet]Emergency started you cannot build or break nor configure anything." +
-                        "Be patient admins are currently dealing with griefer attack");
+                        "Be patient admins are currently dealing with griefer attack.[]");
             }
             time= 180;
             thread=Timer.schedule(new TimerTask() {
@@ -214,7 +214,7 @@ public class AntiGriefer implements Votable, Interruptible,LoadSave{
     public String getHudInfo() {
         String time=String.format("%d:%02d",emergency.time/60,emergency.time%60);
         return emergency.active() ? emergency.getColor() + time +
-                "Emergency mode. Be patient [blue]admins[] have to eliminate all [pink]griefers[]" + time + "\n":null;
+                "Emergency mode. Be patient [blue]admins[] have to eliminate all [pink]griefers[]" + time + "[]":null;
     }
 
     @Override

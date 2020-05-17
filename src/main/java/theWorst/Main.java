@@ -895,12 +895,16 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.<Player>register("search","<searchKey/chinese/sort/online> [sortType]",
+        handler.<Player>register("search","<searchKey/chinese/sort/online/rank> [sortType]",
                 "search for player by name or display all chinese players, or display all online players " +
                         "or display list sorted",(arg,player)->{
             Array<String> res;
             if (arg.length==1){
                 switch (arg[0]) {
+                    case "rank":
+                        player.sendMessage(prefix+"Available ranks: "+ Arrays.toString(Rank.values())+
+                                "\nAvailable special ranks:"+Database.ranks.toString());
+                        return;
                     case "sort":
                         player.sendMessage(prefix+"Available sort types: "+ Arrays.toString(Stat.values()));
                         return;
@@ -912,11 +916,10 @@ public class Main extends Plugin {
                         break;
                     default:
                         res = Database.getAllPlayersIndexes(arg[0]);
-
                         break;
                 }
             } else {
-                res=Database.getSorted(arg[1]);
+                res=arg[0].equals("sort") ? Database.getSorted(arg[1]):Database.getAllPlayersIndexesByRank(arg[1]);
                 if(res==null){
                     player.sendMessage(prefix+"Invalid sort type, for list of available see /search sort");
                     return;

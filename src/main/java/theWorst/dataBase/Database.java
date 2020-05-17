@@ -294,6 +294,16 @@ public class Database implements Votable {
         return res;
     }
 
+    public static Array<String> getAllPlayersIndexesByRank(String search){
+        Array<String> res=new Array<>();
+        for(String uuid:data.keySet()){
+            PlayerData pd=getData(uuid);
+            if(!(pd.trueRank.name().equals(search) || (pd.specialRank!=null && pd.specialRank.equals(search)))) continue;
+            res.add(formLine(pd));
+        }
+        return res;
+    }
+
     public static Array<String> getRankInfo(){
         Array<String> res=new Array<>();
         for(SpecialRank sr:ranks.values()){
