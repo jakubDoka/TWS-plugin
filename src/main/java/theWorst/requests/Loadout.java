@@ -1,13 +1,17 @@
 package theWorst.requests;
 
+import arc.Events;
 import arc.struct.Array;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
+import mindustry.game.EventType;
+import mindustry.game.Team;
 import mindustry.game.Teams;
 import mindustry.gen.Call;
 import mindustry.type.Item;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
+import theWorst.Hud;
 import theWorst.Main;
 import theWorst.Package;
 import theWorst.dataBase.Database;
@@ -17,7 +21,9 @@ import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
 
-import static mindustry.Vars.state;
+import java.awt.*;
+
+import static mindustry.Vars.*;
 
 
 public class Loadout extends Requesting implements Requester, Interruptible, LoadSave, Votable {
@@ -26,10 +32,16 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
 
     final String STORAGE_SIZE = "storage_size";
     final String colon="[gray]<L>[]";
-
     public Loadout() {
         super();
         config.put(STORAGE_SIZE, 10000000);
+
+        Events.on(EventType.GameOverEvent.class ,e->{
+            if(!(state.teams.cores(Team.sharded).isEmpty() && playerGroup.isEmpty())){
+                launch(new Package("all",1000000,false,playerGroup.all().first()));
+                Hud.addAd("[green]All resources were aromatically launched to loadout.[]",30);
+            }
+        });
     }
 
     public Item getItemByName(String name) {

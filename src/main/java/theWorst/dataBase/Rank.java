@@ -54,7 +54,7 @@ public enum Rank implements java.io.Serializable{
     };
 
     Color color;
-    Perm permission=Perm.normal;
+    public Perm permission=Perm.normal;
     boolean displayed=true;
     public boolean isAdmin=false;
     public boolean permanent=true;

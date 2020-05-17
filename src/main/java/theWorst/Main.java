@@ -5,6 +5,7 @@ import arc.graphics.Color;
 import arc.math.Mathf;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
+import arc.struct.IntIntMap;
 import arc.util.*;
 import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.BaseUnit;
@@ -45,14 +46,15 @@ import static java.lang.Math.*;
 import static mindustry.Vars.*;
 
 public class Main extends Plugin {
-    public static final String configFile ="settings.json";
-    public static final String saveFile = "save.json";
+    static final String configFile ="settings.json";
+    static final String saveFile = "save.json";
     public static final String directory = "config/mods/The_Worst/";
     public static final String prefix = "[coral][[[scarlet]Server[]]:[]";
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
-    public static ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
+    ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
     public static ArrayMap<String, Requesting> configured = new ArrayMap<>();
+    IntIntMap actionMap=new IntIntMap();
 
     public static int transportTime = 3 * 60;
 
@@ -79,8 +81,20 @@ public class Main extends Plugin {
     VoteKick voteKick=new VoteKick();
 
     public Main() {
+        Events.on(EventType.PlayEvent.class,e-> actionMap.clear());
 
+        Events.on(EventType.BlockBuildEndEvent.class,e->{
+            if(e.player==null ) return;
+            if(e.breaking) {
+                actionMap.remove(e.tile.pos(),-1);
+            } else {
+                if (Database.getData(e.player).trueRank.permission.getValue() > Perm.high.getValue()) {
+                    actionMap.put(e.tile.pos(), Perm.high.getValue());
+                }
+            }
+        });
 
+        Events.on(EventType.BlockDestroyEvent.class, e-> actionMap.remove(e.tile.pos(),-1));
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
@@ -131,7 +145,10 @@ public class Main extends Plugin {
                     dataBase.afkThread.run();
                 }
                 if (player.isAdmin) return true;
-
+                if((actionMap.get(action.tile.pos(),-1)>Database.getData(player).trueRank.permission.getValue())){
+                    player.sendMessage(prefix+"You have too low rank to interact with this building.");
+                    return false;
+                }
                 return antiGriefer.canBuild(player);
             });
             netServer.admins.addChatFilter((player,message)->{

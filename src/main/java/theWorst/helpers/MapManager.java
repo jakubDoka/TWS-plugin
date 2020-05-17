@@ -97,22 +97,18 @@ public class MapManager implements Votable {
 
     public Array<String> statistics(){
         Array<String> res=new Array<>();
-        Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
+        Array<mapData> maps=Array.with(data.values());
         double bestRatio=0;
-        for (Map m:maps){
-            if(!data.containsKey(m.name())) continue;
-            double r=data.get(m.name()).getPlayRatio();
+        for (mapData m:maps){
+            double r=m.getPlayRatio();
             if (r>bestRatio) bestRatio=r;
         }
         for (int i=0;i<maps.size;i++){
-            Map m=maps.get(i);
-            String nm=m.name();
-            if(!data.containsKey(m.name())) continue;
-            int r=(int)data.get(nm).getRating();
-            int ra=(int)(data.get(nm).getPlayRatio()/bestRatio*10);
-            res.add(i+" | "+nm+" | "+String.format("%d/10",r)+" | "+
+            mapData m=maps.get(i);
+            int ra=(int)(m.getPlayRatio()/bestRatio*10);
+            res.add(i+" | "+m.name+" | "+String.format("%.1f/10",m.getRating())+" | "+
                 "<"+new String(new char[ra]).replace("\0", "=")+
-                    new String(new char[10-ra]).replace("\0", "-")+">");
+                    new String(new char[10-ra]).replace("\0", "-")+">\n");
         }
         return res;
     }
@@ -234,7 +230,7 @@ public class MapManager implements Votable {
                     "[gray]wave record:[] " + waveRecord + "\n" +
                     "[gray]server age:[] " + Main.milsToTime(Time.timeSinceMillis(bornDate)) + "\n" +
                     "[gray]total play time:[] " + Main.milsToTime(playtime) + "\n" +
-                    "[gray]rating:[] " + getRating() + "/10";
+                    String.format("[gray]rating:[] %.1f/10",getRating());
         }
 
         public float getRating(){

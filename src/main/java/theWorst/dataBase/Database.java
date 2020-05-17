@@ -12,6 +12,7 @@ import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.net.Administration;
 import mindustry.type.ItemStack;
+import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -37,6 +38,8 @@ public class Database implements Votable {
     public final static String saveFile= Main.directory+"database.ser";
     public final static String rankFile= Main.directory+"rankConfig.json";
     public Timer.Task afkThread;
+
+
 
     public Database(){
 
@@ -142,6 +145,7 @@ public class Database implements Votable {
 
         Events.on(EventType.PlayerLeave.class, e->{
             getData(e.player).disconnect();
+            updateRank(e.player,Stat.playTime);
         });
 
         afkThread=Timer.schedule(()->{
