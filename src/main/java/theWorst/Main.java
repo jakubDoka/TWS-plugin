@@ -53,7 +53,6 @@ public class Main extends Plugin {
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
     ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
     public static ArrayMap<String, Requester> configured = new ArrayMap<>();
-    IntIntMap actionMap=new IntIntMap();
 
     public static int transportTime = 3 * 60;
 
@@ -81,20 +80,6 @@ public class Main extends Plugin {
     VoteKick voteKick=new VoteKick();
 
     public Main() {
-        Events.on(EventType.PlayEvent.class,e-> actionMap.clear());
-
-        Events.on(EventType.BlockBuildEndEvent.class,e->{
-            if(e.player==null ) return;
-            if(e.breaking) {
-                actionMap.remove(e.tile.pos(),-1);
-            } else {
-                if (Database.getData(e.player).trueRank.permission.getValue() > Perm.high.getValue()) {
-                    actionMap.put(e.tile.pos(), Perm.high.getValue());
-                }
-            }
-        });
-
-        Events.on(EventType.BlockDestroyEvent.class, e-> actionMap.remove(e.tile.pos(),-1));
 
         Events.on(PlayerChatEvent.class, e -> {
             if (vote.voting){
@@ -145,10 +130,6 @@ public class Main extends Plugin {
                     dataBase.afkThread.run();
                 }
                 if (player.isAdmin) return true;
-                if((actionMap.get(action.tile.pos(),-1)>Database.getData(player).trueRank.permission.getValue())){
-                    player.sendMessage(prefix+"You have too low rank to interact with this building.");
-                    return false;
-                }
                 return antiGriefer.canBuild(player);
             });
             netServer.admins.addChatFilter((player,message)->{

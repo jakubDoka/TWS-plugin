@@ -68,9 +68,9 @@ public class ActionManager {
                 TileInfo ti=data[action.tile.y][action.tile.x];
                 if(pd.trueRank.permission.getValue()>=ti.lock){
                     ti.lastInteract=pd;
-
-                    return true;
+                        return true;
                 }
+                player.sendMessage(Main.prefix+"You have too low rank to interact with this Tile.");
                 return false;
             });
         });

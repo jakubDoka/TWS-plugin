@@ -83,6 +83,7 @@ public class AntiGriefer implements Votable, Interruptible,LoadSave{
     @Override
     public void launch(Package p) {
         PlayerData pd=((PlayerData)p.obj);
+        Player player=playerGroup.find(pl->pl.name.equals(pd.originalName));
         if(p.object.equals("remove")){
             Call.sendMessage(Main.prefix+"[orange]"+pd.originalName+"[] lost "+Rank.griefer.getName()+" rank.");
             pd.trueRank=Rank.newcomer;
@@ -94,7 +95,6 @@ public class AntiGriefer implements Votable, Interruptible,LoadSave{
             bunUnBunSubNet(pd,true);
             Log.info(pd.originalName+" wos marked as griefer.");
         }
-        Player player=playerGroup.find(pl->pl.name.equals(pd.originalName));
         if(player==null) return;
         Database.updateName(player,pd);
 
