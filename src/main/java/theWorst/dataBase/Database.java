@@ -144,8 +144,11 @@ public class Database implements Votable {
         });
 
         Events.on(EventType.PlayerLeave.class, e->{
-            getData(e.player).disconnect();
-            updateRank(e.player,Stat.playTime);
+            PlayerData pd=getData(e.player);
+            pd.disconnect();
+            if(pd.trueRank==Rank.newcomer){
+                Call.sendMessage(Main.prefix+"[gray]"+e.player.name+" has id "+getData(e.player).serverId);
+            }
         });
 
         afkThread=Timer.schedule(()->{
