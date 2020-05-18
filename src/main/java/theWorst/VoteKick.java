@@ -34,7 +34,18 @@ public class VoteKick{
             }
         }
 
-        if(AntiGriefer.verifyTarget(found, player, "kick")) return;
+        if(found.isAdmin){
+            player.sendMessage(Main.prefix+"Did you really expect to be able to mark an admin?");
+            return;
+        }
+        if(found==player){
+            player.sendMessage(Main.prefix+"You cannot kick your self.");
+            return;
+        }
+        if(AntiGriefer.isGriefer(player)){
+            AntiGriefer.abuse(player);
+            return;
+        }
         voting=true;
         votes=0;
         this.target = found;

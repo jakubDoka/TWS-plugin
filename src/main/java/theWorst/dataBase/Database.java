@@ -1,6 +1,7 @@
 package theWorst.dataBase;
 
 import arc.Events;
+import arc.struct.Array;
 import arc.util.Log;
 import arc.util.Time;
 import arc.util.Timer;
@@ -12,25 +13,22 @@ import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.net.Administration;
 import mindustry.type.ItemStack;
-import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import theWorst.AntiGriefer;
 import theWorst.Hud;
 import theWorst.Main;
-
-import java.io.*;
-import arc.struct.Array;
 import theWorst.Package;
 import theWorst.interfaces.Votable;
 import theWorst.requests.Loadout;
 
+import java.io.*;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Objects;
 
-import static mindustry.Vars.*;
+import static mindustry.Vars.netServer;
+import static mindustry.Vars.playerGroup;
 
 public class Database implements Votable {
     static HashMap<String,PlayerData> data=new HashMap<>();

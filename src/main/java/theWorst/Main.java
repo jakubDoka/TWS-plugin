@@ -69,6 +69,7 @@ public class Main extends Plugin {
     Factory factory;
     ServerPlayer serverPlayer;
 
+    ActionManager actionManager =new ActionManager();
     Loadout loadout = new Loadout();
     CoreBuilder builder = new CoreBuilder();
     WaveSkipper skipper = new WaveSkipper();
@@ -914,12 +915,18 @@ public class Main extends Plugin {
             if(arg.length>=1) {
                 switch (arg[0]) {
                     case "rank":
-                        player.sendMessage(prefix + "Available ranks: " + Arrays.toString(Rank.values()) +
-                                "\nAvailable special ranks:" + Database.ranks.toString());
-                        return;
+                        if(arg.length!=3) {
+                            player.sendMessage(prefix + "Available ranks: " + Arrays.toString(Rank.values()) +
+                                    "\nAvailable special ranks:" + Database.ranks.toString());
+                            return;
+                        }
+                        break;
                     case "sort":
-                        player.sendMessage(prefix + "Available sort types: " + Arrays.toString(Stat.values()));
-                        return;
+                        if(arg.length!=3){
+                            player.sendMessage(prefix + "Available sort types: " + Arrays.toString(Stat.values()));
+                            return;
+                        }
+                        break;
                     case "chinese":
                         res = Database.getAllChinesePlayersIndexes();
                         break;

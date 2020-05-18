@@ -82,46 +82,28 @@ public class AntiGriefer implements Votable, Interruptible,LoadSave{
 
     @Override
     public void launch(Package p) {
-        Player player=((Player)p.obj);
+        PlayerData pd=((PlayerData)p.obj);
         if(p.object.equals("remove")){
-            Database.setRank(player,Rank.newcomer);
-            player.sendMessage(Main.prefix+"[pink]Your rank wos restarted.");
-            Log.info(player+" is no longer griefer.");
-            return;
+            Call.sendMessage(Main.prefix+"[orange]"+pd.originalName+"[] lost "+Rank.griefer.getName()+" rank.");
+            pd.trueRank=Rank.newcomer;
+            bunUnBunSubNet(pd,false);
+            Log.info(pd.originalName+" is no longer griefer.");
+        }else {
+            Call.sendMessage(Main.prefix+"[orange]"+pd.originalName+"[] obtained "+Rank.griefer.getName()+" rank.");
+            pd.trueRank=Rank.griefer;
+            bunUnBunSubNet(pd,true);
+            Log.info(pd.originalName+" wos marked as griefer.");
         }
-        Database.setRank(player,Rank.griefer);
-        player.sendMessage(Main.prefix+"[pink]You were marked as griefer.");
-        Log.info(player+" wos marked as griefer.");
+        Player player=playerGroup.find(pl->pl.name.equals(pd.originalName));
+        if(player==null) return;
+        Database.updateName(player,pd);
 
-    }
-
-    public static boolean verifyTarget(Player target,Player player,String matter){
-        if(Database.hasPerm(target, Perm.higher)){
-            player.sendMessage(Main.prefix+"You cannot kick " + Database.getData(target).trueRank.getName() + ".");
-            return true;
-        }
-        if(target.isAdmin){
-            player.sendMessage(Main.prefix+"Did you really expect to be able to "+matter+" an admin?");
-            return true;
-        }
-        if(target.isLocal){
-            player.sendMessage(Main.prefix+"Local players cannot be "+matter+"ed.");
-            return true;
-        }
-        if(target==player){
-            player.sendMessage(Main.prefix+"You cannot "+matter+" your self.");
-            return true;
-        }
-        if(isGriefer(player)){
-            abuse(player);
-            return true;
-        }
-        return false;
     }
 
     @Override
     public Package verify(Player player, String object, int amount, boolean toBase) {
         Player target;
+        PlayerData pd=null;
         if(object.length() > 1 && object.startsWith("#") && Strings.canParseInt(object.substring(1))){
             int id = Strings.parseInt(object.substring(1));
             target = playerGroup.find(p -> p.id == id);
@@ -131,14 +113,31 @@ public class AntiGriefer implements Votable, Interruptible,LoadSave{
         if(target==null){
             target=Main.findPlayer(object);
             if(target==null){
-                player.sendMessage(Main.prefix+"Player not found.");
-                return null;
+                pd=Database.findData(object);
+                if(pd!=null){
+                    if(pd.trueRank.isAdmin){
+                        player.sendMessage(Main.prefix+" You cannot mark " + pd.trueRank.getName() + ".");
+                        return null;
+                    }
+                }
             }
         }
-
-        if(verifyTarget(target, player, "mark")) return null;
-
-        Package p=new Package(isGriefer(target) ? "remove":"add",target,player);
+        if(target!=null){
+            if(target.isAdmin){
+                player.sendMessage(Main.prefix+"Did you really expect to be able to mark an admin?");
+                return null;
+            }
+            if(target==player){
+                player.sendMessage(Main.prefix+"You cannot mark your self.");
+                return null;
+            }
+            pd=Database.getData(target);
+        }
+        if(pd==null){
+            player.sendMessage(Main.prefix+"Player not found.");
+            return null;
+        }
+        Package p=new Package(pd.trueRank==Rank.griefer ? "remove":"add",pd,player);
         if(player.isAdmin){
             launch(p);
             return null;

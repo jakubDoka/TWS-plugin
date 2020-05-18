@@ -138,6 +138,12 @@ public class Vote implements Interruptible {
         voted.add(player.con.address);
 
         int req=getRequired();
+
+        if(votable instanceof AntiGriefer && player.isAdmin){
+            close( vote.equals("y"));
+            return;
+        }
+
         if (vote.equals("y")) {
             yes += 1;
             if (yes >= req) {
