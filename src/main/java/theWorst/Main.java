@@ -1,27 +1,26 @@
 package theWorst;
 
 import arc.Events;
-import arc.graphics.Color;
 import arc.math.Mathf;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
 import arc.struct.IntIntMap;
 import arc.util.*;
-import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.base.BuilderDrone;
 import mindustry.game.EventType;
-import mindustry.game.EventType.*;
+import mindustry.game.EventType.BuildSelectEvent;
+import mindustry.game.EventType.PlayerChatEvent;
+import mindustry.game.EventType.ServerLoadEvent;
+import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.net.Administration;
 import mindustry.plugin.Plugin;
 import mindustry.type.Item;
-import mindustry.type.ItemStack;
 import mindustry.type.ItemType;
 import mindustry.type.UnitType;
-import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -37,7 +36,7 @@ import theWorst.interfaces.runSave;
 import theWorst.requests.Factory;
 import theWorst.requests.Loadout;
 import theWorst.requests.Request;
-import theWorst.requests.Requesting;
+import theWorst.requests.Requester;
 
 import java.io.*;
 import java.util.Arrays;
@@ -53,7 +52,7 @@ public class Main extends Plugin {
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
     ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
-    public static ArrayMap<String, Requesting> configured = new ArrayMap<>();
+    public static ArrayMap<String, Requester> configured = new ArrayMap<>();
     IntIntMap actionMap=new IntIntMap();
 
     public static int transportTime = 3 * 60;
@@ -169,16 +168,16 @@ public class Main extends Plugin {
                 Database.updateRank(player,Stat.messageCount);
                 return msgColor+message;
             });
-
             load_items();
             serverPlayer = new ServerPlayer();
-            factory = new Factory(loadout);
             mapManager = new MapManager();
             mapManager.cleanup();
-            addToGroups();
             if (!makeDir()) {
                 Log.info("Unable to create directory " + directory + ".");
+                return;
             }
+            factory = new Factory(loadout);
+            addToGroups();
             load();
             config();
             tester.loadQuestions();
@@ -241,18 +240,16 @@ public class Main extends Plugin {
     }
 
     public void load() {
-        String path = directory + saveFile;
-        loadJson(path,(data)->{
-            for (String r : loadSave.keys()) {
-                if (!data.containsKey(r)) {
-                    Log.info("Failed to load save file.");
-                    return;
-                }
-            }
-            loadSave.keys().forEach((k) -> loadSave.get(k).load((JSONObject) data.get(k)));
-        },this::save);
         dataBase.load();
         mapManager.load();
+        String path = directory + saveFile;
+        loadJson(path,(data)->{
+            for (String k : loadSave.keys()) {
+                if (data.containsKey(k) && loadSave.containsKey(k)) {
+                    loadSave.get(k).load((JSONObject) data.get(k));
+                }
+            }
+        },this::save);
     }
 
     public void save() {
@@ -302,9 +299,8 @@ public class Main extends Plugin {
         if (autoSaveThread != null){
             autoSaveThread.cancel();
         }
-        interval*=60;
-        autoSaveThread = Timer.schedule(this::save,interval,interval);
-        Log.info("Autosave started.It will save every "+ interval/60 +"min.");
+        autoSaveThread = Timer.schedule(this::save,0,interval*60);
+        Log.info("Autosave started.It will save every "+ interval +"min.");
     }
 
     public String formPage(Array<String > data,int page,String title,int pageSize){
@@ -337,9 +333,7 @@ public class Main extends Plugin {
         return "[orange]" + (object.equals("all") ? "all" : amount + " " + object) + "[]";
     }
 
-    public static String timeToString(int time) {
-        return time / 60 + "min" + time % 60 + "sec";
-    }
+
 
     private boolean makeDir() {
         File dir = new File(directory);
@@ -912,18 +906,19 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.<Player>register("search","<searchKey/chinese/sort/online/rank> [sortType]",
-                "search for player by name or display all chinese players, or display all online players " +
-                        "or display list sorted",(arg,player)->{
-            Array<String> res;
-            if (arg.length==1){
+        handler.<Player>register("search","<searchKey/chinese/sort/online/rank> [invert/normal] [sortType/rankName] ",
+                "Search for player by name, display all chinese players, all online players," +
+                        "all players with specified rank or sorted list of players.You can optionally invert the " +
+                        "list.",(arg,player)->{
+            Array<String> res=new Array<>();
+            if(arg.length>=1) {
                 switch (arg[0]) {
                     case "rank":
-                        player.sendMessage(prefix+"Available ranks: "+ Arrays.toString(Rank.values())+
-                                "\nAvailable special ranks:"+Database.ranks.toString());
+                        player.sendMessage(prefix + "Available ranks: " + Arrays.toString(Rank.values()) +
+                                "\nAvailable special ranks:" + Database.ranks.toString());
                         return;
                     case "sort":
-                        player.sendMessage(prefix+"Available sort types: "+ Arrays.toString(Stat.values()));
+                        player.sendMessage(prefix + "Available sort types: " + Arrays.toString(Stat.values()));
                         return;
                     case "chinese":
                         res = Database.getAllChinesePlayersIndexes();
@@ -935,12 +930,17 @@ public class Main extends Plugin {
                         res = Database.getAllPlayersIndexes(arg[0]);
                         break;
                 }
-            } else {
-                res=arg[0].equals("sort") ? Database.getSorted(arg[1]):Database.getAllPlayersIndexesByRank(arg[1]);
-                if(res==null){
-                    player.sendMessage(prefix+"Invalid sort type, for list of available see /search sort");
+
+            }
+            if(arg.length==3 && res.isEmpty()){
+                res =arg[1].equals("sort") ? Database.getSorted(arg[1]):Database.getAllPlayersIndexesByRank(arg[1]);
+                if (res == null) {
+                    player.sendMessage(prefix + "Invalid sort type, for list of available see /search sort");
                     return;
                 }
+            }
+            if(arg.length>=2 && arg[1].equals("invert")){
+                res.reverse();
             }
             for(String s:res){
                 player.sendMessage(s);
@@ -948,7 +948,6 @@ public class Main extends Plugin {
             if(res.isEmpty()){
                 player.sendMessage(prefix+"No results found.");
             }
-
         });
 
         handler.<Player>register("info","[name/ID|list/ranks] [page] ","Displays info about you or another player.",
@@ -965,7 +964,7 @@ public class Main extends Plugin {
                     return;
                 }
                 if(arg[0].equals("ranks")){
-                    Call.onInfoMessage(player.con, formPage(Database.getRankInfo(), page, "rank info",pageSize));
+                    Call.onInfoMessage(player.con, formPage(Database.getRankInfo(), page, "rank info",4));
                     return;
                 }
                 PlayerData pd=Database.findData(arg[0]);

@@ -174,14 +174,14 @@ public class Database implements Votable {
             Array<PlayerData> dt=Array.with(data.values());
 
             while(!dt.isEmpty()){
-                PlayerData worst=dt.first();
+                PlayerData best=dt.first();
                 for(int i=1;i<dt.size;i++){
-                    if(worst.getStat(stat)>dt.get(i).getStat(stat)){
-                        worst=dt.get(i);
+                    if(best.getStat(stat)<dt.get(i).getStat(stat)){
+                        best=dt.get(i);
                     }
                 }
-                dt.remove(worst);
-                res.add(formLine(worst));
+                dt.remove(best);
+                res.add(formLine(best));
             }
             return res;
         } catch (IllegalArgumentException ex){

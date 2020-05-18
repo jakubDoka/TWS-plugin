@@ -56,8 +56,9 @@ public class Vote implements Interruptible {
             return;
         }
         if(isRecent(requester)){
+            int time=recent.get(requester.con.address);
             requester.sendMessage(Main.prefix+"Your last vote failed,to prevent spam you have to wait "
-                    +Main.timeToString(recent.get(requester.con.address))+".");
+                    +time / 60 + "min" + time % 60 + "sec.");
             return;
         }
         this.votable = votable;

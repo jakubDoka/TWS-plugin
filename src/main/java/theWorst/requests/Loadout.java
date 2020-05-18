@@ -1,7 +1,6 @@
 package theWorst.requests;
 
 import arc.Events;
-import arc.struct.Array;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.game.EventType;
@@ -15,18 +14,15 @@ import theWorst.Hud;
 import theWorst.Main;
 import theWorst.Package;
 import theWorst.dataBase.Database;
-import theWorst.dataBase.Perm;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
 
-import java.awt.*;
-
 import static mindustry.Vars.*;
 
 
-public class Loadout extends Requesting implements Requester, Interruptible, LoadSave, Votable {
+public class Loadout extends Requester implements Interruptible, LoadSave, Votable {
 
     int[] storage = new int[10];
 
@@ -76,10 +72,6 @@ public class Loadout extends Requesting implements Requester, Interruptible, Loa
         return message.toString();
     }
 
-    @Override
-    public Array<Request> getRequests() {
-        return requests;
-    }
 
     @Override
     public void fail(String object, int amount) {

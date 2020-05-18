@@ -20,14 +20,13 @@ import arc.util.Timer;
 import theWorst.Main;
 import theWorst.Package;
 import theWorst.dataBase.Database;
-import theWorst.dataBase.Perm;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
 import static mindustry.Vars.*;
 
-public class Factory extends Requesting implements Requester, Interruptible, LoadSave, Votable {
+public class Factory extends Requester implements Interruptible, LoadSave, Votable {
     final int UNIT_COUNT = 13;
 
     enum idx{
@@ -82,11 +81,6 @@ public class Factory extends Requesting implements Requester, Interruptible, Loa
             b.append(colon);
         }
         return b.toString();
-    }
-
-    @Override
-    public Array<Request> getRequests() {
-        return requests;
     }
 
     @Override
