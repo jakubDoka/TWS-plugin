@@ -4,14 +4,11 @@ import arc.Events;
 import arc.math.Mathf;
 import arc.struct.Array;
 import arc.struct.ArrayMap;
-import arc.struct.IntIntMap;
 import arc.util.*;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.base.BuilderDrone;
-import mindustry.game.EventType;
 import mindustry.game.EventType.BuildSelectEvent;
-import mindustry.game.EventType.PlayerChatEvent;
 import mindustry.game.EventType.ServerLoadEvent;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.game.Team;
@@ -45,10 +42,17 @@ import static java.lang.Math.*;
 import static mindustry.Vars.*;
 
 public class Main extends Plugin {
+    //TOdo test vote - there are new visual cnages - let vote fail
+    //TODO test action manager - try interact with staff that verified built as griefer or newcomer
+    //TODO test ban - bun person via player list, he should be able to rejoin but as griefer only
+    //TODO test tester - just test if griefer cannot do test
+    //TODO test vote kick - just make sure it works properly
+
     static final String configFile ="settings.json";
     static final String saveFile = "save.json";
     public static final String directory = "config/mods/The_Worst/";
     public static final String prefix = "[coral][[[scarlet]Server[]]:[]";
+    public static final String noPerm = prefix+"You have no permission to do this. Please submit your appeal in discord";
 
     public static final String[] itemIcons = {"\uF838", "\uF837", "\uF836", "\uF835", "\uF832", "\uF831", "\uF82F", "\uF82E", "\uF82D", "\uF82C"};
     ArrayMap<String, LoadSave> loadSave = new ArrayMap<>();
@@ -75,23 +79,10 @@ public class Main extends Plugin {
     Hud hud = new Hud();
     Database dataBase=new Database();
     Tester tester =new Tester();
-    AntiGriefer antiGriefer=new AntiGriefer();
     Vote vote = new Vote();
     VoteKick voteKick=new VoteKick();
 
     public Main() {
-
-        Events.on(PlayerChatEvent.class, e -> {
-            if (vote.voting){
-                if(AntiGriefer.isGriefer(e.player)){
-                    AntiGriefer.abuse(e.player);
-                    return;
-                }
-                if(e.message.equals("y") || e.message.equals("n")) {
-                    vote.addVote(e.player, e.message);
-                }
-            }
-        });
 
         Events.on(WorldLoadEvent.class, e -> interruptibles.forEach(Interruptible::interrupt));
 
@@ -121,29 +112,22 @@ public class Main extends Plugin {
         });
 
         Events.on(ServerLoadEvent.class, e -> {
-            netServer.admins.addActionFilter(action -> {
-                Player player = action.player;
-                if (player == null) return true;
-                PlayerData pd=Database.getData(player);
-                pd.lastAction=Time.millis();
-                if(pd.rank==Rank.AFK){
-                    dataBase.afkThread.run();
-                }
-                if (player.isAdmin) return true;
-                return antiGriefer.canBuild(player);
-            });
             netServer.admins.addChatFilter((player,message)->{
-                String msgColor="["+Database.getData(player).textColor+"]";
                 PlayerData pd=Database.getData(player);
-                if((message.equals("y") || message.equals("n")) && vote.voting){
-                    return null;
+                String msgColor="["+pd.textColor+"]";
+                pd.lastAction= Time.millis();
+                if(pd.rank==Rank.AFK){
+                    Database.afkThread.run();
                 }
-                if(AntiGriefer.isGriefer(player)){
+                if(pd.trueRank==Rank.griefer){
                     if(Time.timeSinceMillis(pd.lastMessage)<10000L){
-                        AntiGriefer.abuse(player);
+                        player.sendMessage(noPerm);
                         return null;
                     }
                     msgColor="[pink]";
+                }else if((message.equals("y") || message.equals("n")) && vote.voting){
+                    vote.addVote(player,message);
+                    return null;
                 }
                 pd.lastMessage=Time.millis();
                 pd.messageCount++;
@@ -203,10 +187,10 @@ public class Main extends Plugin {
         interruptibles.add(loadout);
         interruptibles.add(factory);
         interruptibles.add(vote);
-        interruptibles.add(antiGriefer);
+        interruptibles.add(actionManager);
         loadSave.put("loadout", loadout);
         loadSave.put("factory", factory);
-        loadSave.put("antiGrifer",antiGriefer);
+        loadSave.put("Database",dataBase);
         loadSave.put("hud",hud);
         configured.put("loadout", loadout);
         configured.put("factory", factory);
@@ -222,7 +206,7 @@ public class Main extends Plugin {
     }
 
     public void load() {
-        dataBase.load();
+        dataBase.loadData();
         mapManager.load();
         String path = directory + saveFile;
         loadJson(path,(data)->{
@@ -240,7 +224,7 @@ public class Main extends Plugin {
             loadSave.keys().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
             return saveData;
         });
-        dataBase.save();
+        dataBase.saveData();
         mapManager.save();
     }
 
@@ -695,9 +679,9 @@ public class Main extends Plugin {
                 player.sendMessage(getPlayerList());
                 return;
             }
-            Package p=antiGriefer.verify(player,arg[0],0,false);
+            Package p=actionManager.verify(player,arg[0],0,false);
             if(p==null) return;
-            vote.aVote(antiGriefer,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
+            vote.aVote(actionManager,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
         });
 
         handler.<Player>register("emergency","[off]","Starts emergency.For admins only.",(arg, player) ->{
@@ -705,7 +689,7 @@ public class Main extends Plugin {
                 player.sendMessage(prefix+"Only admin can start or disable emergency.");
                 return;
             }
-            antiGriefer.switchEmergency(arg.length==1);
+            actionManager.switchEmergency(arg.length==1);
         });
 
         handler.<Player>register("maps","[page/rate/info/rules] [mapName/mapIdx/1-10]","Displays list maps,rates current map or " +

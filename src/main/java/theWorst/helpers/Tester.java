@@ -6,10 +6,10 @@ import arc.util.Log;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
 import org.json.simple.JSONArray;
-import theWorst.AntiGriefer;
 import theWorst.Main;
 import theWorst.dataBase.Database;
 import theWorst.dataBase.Perm;
+import theWorst.dataBase.PlayerData;
 import theWorst.dataBase.Rank;
 
 import java.io.FileWriter;
@@ -78,12 +78,13 @@ public class Tester {
 
     public void processAnswer(Player player,String answer){
         String uuid=player.uuid;
-        if(Database.hasPerm(player, Perm.high)){
+        PlayerData pd=Database.getData(player);
+        if(pd.trueRank.permission.getValue()>=Perm.high.getValue()){
             player.sendMessage(Main.prefix+"You don t need test, you are already verified.");
             return;
         }
-        if (AntiGriefer.isGriefer(player)){
-            AntiGriefer.abuse(player);
+        if (pd.trueRank==Rank.griefer){
+            player.sendMessage(Main.noPerm);
             return;
         }
         if(tested.containsKey(uuid) && tested.get(uuid)[0]>=questions.size){

@@ -16,10 +16,10 @@ import mindustry.type.ItemStack;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import theWorst.AntiGriefer;
 import theWorst.Hud;
 import theWorst.Main;
 import theWorst.Package;
+import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 import theWorst.requests.Loadout;
 
@@ -27,15 +27,15 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import static mindustry.Vars.netServer;
-import static mindustry.Vars.playerGroup;
+import static mindustry.Vars.*;
 
-public class Database implements Votable {
+public class Database implements Votable, LoadSave {
     static HashMap<String,PlayerData> data=new HashMap<>();
     public static HashMap<String,SpecialRank> ranks=new HashMap<>();
+    static HashSet<String> subNets=new HashSet<>();
     public final static String saveFile= Main.directory+"database.ser";
     public final static String rankFile= Main.directory+"rankConfig.json";
-    public Timer.Task afkThread;
+    public static Timer.Task afkThread;
 
 
 
@@ -96,6 +96,11 @@ public class Database implements Votable {
             }
         });
 
+        Events.on(EventType.PlayerBanEvent.class,e->{
+            netServer.admins.unbanPlayerID(e.player.getInfo().id);
+            setRank(e.player,Rank.griefer);
+        });
+
         Events.on(EventType.BlockBuildEndEvent.class, e->{
             if(e.player == null) return;
             if(!e.breaking && e.tile.block().buildCost/60<1) return;
@@ -132,7 +137,7 @@ public class Database implements Votable {
             if(pd.rank==Rank.AFK){
                 pd.rank=pd.trueRank;
             }
-            if(AntiGriefer.isSubNetBanned(player)){
+            if(isSubNetBanned(player)){
                 setRank(player,Rank.griefer);
             } else {
                 updateRank(player,null);
@@ -152,6 +157,7 @@ public class Database implements Votable {
         afkThread=Timer.schedule(()->{
             for(Player p:playerGroup){
                 PlayerData pd=getData(p);
+                if(pd==null) return;
                 if(Rank.AFK.condition(pd)){
                     if(pd.rank==Rank.AFK) return;
                     Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] became "+Rank.AFK.getName()+".");
@@ -163,6 +169,31 @@ public class Database implements Votable {
                 }
             }
         },0,60);
+    }
+
+    public static String getSubNet(PlayerData pd){
+        String address=pd.ip;
+        return address.substring(0,address.lastIndexOf("."));
+    }
+
+    public static void bunUnBunSubNet(PlayerData pd,boolean bun){
+        String subNet=getSubNet(pd);
+        boolean contains=subNets.contains(subNet);
+        if(bun && !contains){
+            subNets.add(subNet);
+            return;
+        }
+        if(contains && !bun){
+            subNets.remove(subNet);
+        }
+    }
+
+    public static boolean isSubNetBanned(Player player){
+        return subNets.contains(getSubNet(getData(player)));
+    }
+
+    public static boolean isGriefer(Player player){
+        return Database.getData(player).trueRank==Rank.griefer;
     }
 
     public static Array<String> getSorted(String s) {
@@ -187,7 +218,7 @@ public class Database implements Votable {
         }
     }
 
-    public void save() {
+    public void saveData() {
         try {
             FileOutputStream fileOut = new FileOutputStream(saveFile);
             ObjectOutputStream out = new ObjectOutputStream(fileOut);
@@ -199,7 +230,7 @@ public class Database implements Votable {
         }
     }
 
-    public void load(){
+    public void loadData(){
         try {
             FileInputStream fileIn = new FileInputStream(saveFile);
             ObjectInputStream in = new ObjectInputStream(fileIn);
@@ -331,9 +362,9 @@ public class Database implements Votable {
             netServer.admins.unAdminPlayer(inf.id);
         }
         if (rank == Rank.griefer) {
-            AntiGriefer.bunUnBunSubNet(pd, true);
+            bunUnBunSubNet(pd, true);
         } else if (wosGrifer) {
-            AntiGriefer.bunUnBunSubNet(pd, false);
+            bunUnBunSubNet(pd, false);
         }
         if(player==null){
             player=playerGroup.find(p->p.name.equals(pd.originalName));
@@ -492,5 +523,21 @@ public class Database implements Votable {
     @Override
     public Package verify(Player player, String object, int amount, boolean toBase) {
         return null;
+    }
+
+    @Override
+    public void load(JSONObject data) {
+        for(Object o:(JSONArray) data.get("subNets")){
+            subNets.add((String)o);
+        }
+    }
+
+    @Override
+    public JSONObject save() {
+        JSONArray subs =new JSONArray();
+        subs.addAll(subNets);
+        JSONObject data =new JSONObject();
+        data.put("subNets",subs);
+        return data;
     }
 }

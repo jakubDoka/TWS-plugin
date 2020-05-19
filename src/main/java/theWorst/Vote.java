@@ -6,6 +6,8 @@ import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import theWorst.dataBase.Database;
 import theWorst.dataBase.Perm;
+import theWorst.dataBase.PlayerData;
+import theWorst.dataBase.Rank;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Votable;
 import theWorst.requests.Factory;
@@ -51,8 +53,8 @@ public class Vote implements Interruptible {
             requester.sendMessage(Main.prefix + "Vote in process.");
             return;
         }
-        if (AntiGriefer.isGriefer(requester)){
-            AntiGriefer.abuse(requester);
+        if (Database.isGriefer(requester)){
+            player.sendMessage(Main.noPerm);
             return;
         }
         if(isRecent(requester)){
@@ -120,17 +122,18 @@ public class Vote implements Interruptible {
     }
 
     public void addVote(Player player, String vote) {
+        PlayerData pd=Database.getData(player);
         if (voted.contains(player.con.address)) {
             player.sendMessage(Main.prefix + "You already voted,sit down!");
             return;
         }
 
-        if (AntiGriefer.isGriefer(player)){
-            AntiGriefer.abuse(player);
+        if (pd.trueRank == Rank.griefer){
+            player.sendMessage(Main.noPerm);
             return;
         }
 
-        if(Database.hasThisPerm(player,Perm.none)){
+        if(pd.rank == Rank.AFK){
             player.sendMessage(Main.prefix + "You are AFK you cannot vote.");
             return;
         }
@@ -139,7 +142,7 @@ public class Vote implements Interruptible {
 
         int req=getRequired();
 
-        if(votable instanceof AntiGriefer && player.isAdmin){
+        if(votable instanceof ActionManager && player.isAdmin){
             close( vote.equals("y"));
             return;
         }
@@ -166,13 +169,12 @@ public class Vote implements Interruptible {
         alert.cancel();
         String result = Main.prefix + "vote-" + message;
         if (success) {
-            result += "-done";
-                votable.launch(aPackage);
+            votable.launch(aPackage);
+            Hud.addAd(result+"-done",5,new String[]{"green","gray"});
         } else {
-            result += "-failed";
             addToRecent(aPackage.target);
+            Hud.addAd(result+"-failed",5,new String[]{"scarlet","gray"});
         }
-        Call.sendMessage(result);
     }
 
     @Override
@@ -183,7 +185,8 @@ public class Vote implements Interruptible {
     @Override
     public String getHudInfo() {
         if(!voting) return null;
-        return "vote for "+message+" "+String.format("%02d",time)+"s [green]"+yes+" [][scarlet]"+no+"[] [gray]req "
-                +getRequired()+"[]";
+        String color=time<10 && time%2==0 ? "white":"gray";
+        return String.format("[%s]vote for %s %02ds [green] %d [][scarlet] %d [gray]req %d[][]",
+                color,message,time,yes,no,getRequired());
     }
 }

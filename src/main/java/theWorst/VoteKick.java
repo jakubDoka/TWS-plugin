@@ -7,6 +7,7 @@ import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import mindustry.net.Packets;
+import theWorst.dataBase.Database;
 
 import static mindustry.Vars.playerGroup;
 
@@ -42,8 +43,8 @@ public class VoteKick{
             player.sendMessage(Main.prefix+"You cannot kick your self.");
             return;
         }
-        if(AntiGriefer.isGriefer(player)){
-            AntiGriefer.abuse(player);
+        if(Database.isGriefer(player)){
+            player.sendMessage("You don t have a permission to do this.");
             return;
         }
         voting=true;
