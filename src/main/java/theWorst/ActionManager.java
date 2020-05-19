@@ -13,6 +13,7 @@ import theWorst.dataBase.*;
 import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.Votable;
 
+import java.util.HashMap;
 import java.util.TimerTask;
 
 import static mindustry.Vars.*;
@@ -32,17 +33,18 @@ public class ActionManager implements Votable, Interruptible {
         });
 
         Events.on(EventType.TapEvent.class, e->{
-            if(Database.hasEnabled(e.player, Setting.inspect)) return;
-            String msg;
+            if(!Database.hasEnabled(e.player, Setting.inspect)) return;
+            StringBuilder msg=new StringBuilder();
             TileInfo ti=data[e.tile.y][e.tile.x];
-            if(ti.lastInteract==null){
-                msg="No one interacted with this tile.";
+            if(ti.data.isEmpty()){
+                msg.append("No one interacted with this tile.");
             }else {
-                msg="name: [orange]"+ti.lastInteract.originalName+"[]\n"+
-                       "id: [orange]"+ti.lastInteract.serverId+"[]\n"+
-                       "rank: [orange]"+ti.lastInteract.trueRank.getSuffix()+"[]\n";
+                for(String s:ti.data.keySet()){
+                    PlayerData pd=ti.data.get(s);
+                    msg.append(String.format("[orange]%s : [gray]name[] - %s [gray]id[] - %d[]\n",s,pd.originalName,pd.serverId));
+                }
             }
-            Call.onLabel(e.player.con,msg,5,e.tile.x*8,e.tile.y*8);
+            Call.onLabel(e.player.con,msg.toString(),5,e.tile.x*8,e.tile.y*8);
         });
 
         Events.on(EventType.BlockBuildEndEvent.class, e->{
@@ -55,7 +57,6 @@ public class ActionManager implements Votable, Interruptible {
                     ti.lock=1;
                 }
             }
-            ti.lastInteract=Database.getData(e.player);
         });
 
         Events.on(EventType.BlockDestroyEvent.class, e-> {
@@ -78,26 +79,27 @@ public class ActionManager implements Votable, Interruptible {
                 return false;
             }
             if(!(pd.trueRank.permission.getValue()>=ti.lock)){
-                String rank=ti.lock==0 ? Rank.newcomer.getName():Rank.verified.getName();
-                player.sendMessage(Main.prefix+"You have to be at least "+rank+" to interact with this tile.");
+                if(ti.lock==0){
+                   player.sendMessage(Main.noPerm);
+                }
+                player.sendMessage(Main.prefix+"You have to be at least "+Rank.verified.getName()+" to interact with this tile.");
                 return false;
 
             }
-            ti.lastInteract=pd;
+            ti.data.put(action.type.name(),pd);
             return true;
         }));
     }
 
 
     static class TileInfo{
-        PlayerData lastInteract=null;
+        HashMap<String ,PlayerData> data = new HashMap<>();
         int lock= Perm.normal.getValue();
     }
 
     @Override
     public void launch(Package p) {
         PlayerData pd=((PlayerData)p.obj);
-        Player player=playerGroup.find(pl->pl.name.equals(pd.originalName));
         if(p.object.equals("remove")){
             Call.sendMessage(Main.prefix+"[orange]"+pd.originalName+"[] lost "+ Rank.griefer.getName()+" rank.");
             pd.trueRank=Rank.newcomer;
@@ -109,6 +111,8 @@ public class ActionManager implements Votable, Interruptible {
             Database.bunUnBunSubNet(pd,true);
             Log.info(pd.originalName+" wos marked as griefer.");
         }
+        pd.rank=pd.trueRank;
+        Player player=playerGroup.find(pl->pl.con.address.equals(pd.ip));
         if(player==null) return;
         Database.updateName(player,pd);
     }

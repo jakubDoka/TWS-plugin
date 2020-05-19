@@ -61,6 +61,10 @@ public class SpecialRank implements Serializable {
 
     }
 
+    public SpecialRank() {
+
+    }
+
     public boolean condition(PlayerData tested){
         if(permanent) return false;
         long val=tested.getStat(stat);

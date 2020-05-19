@@ -36,10 +36,13 @@ public class Database implements Votable, LoadSave {
     public final static String saveFile= Main.directory+"database.ser";
     public final static String rankFile= Main.directory+"rankConfig.json";
     public static Timer.Task afkThread;
+    static SpecialRank error =new SpecialRank();
 
 
 
     public Database(){
+
+
 
         Events.on(EventType.GameOverEvent.class, e ->{
             for(Player p:playerGroup){
@@ -157,7 +160,7 @@ public class Database implements Votable, LoadSave {
             PlayerData pd=getData(e.player);
             pd.disconnect();
             if(pd.trueRank==Rank.newcomer){
-                Call.sendMessage(Main.prefix+"[gray]"+e.player.name+" has id "+getData(e.player).serverId);
+                Call.sendMessage(Main.prefix+"[gray]"+e.player.name+"s id is "+getData(e.player).serverId);
             }
         });
 
@@ -176,6 +179,10 @@ public class Database implements Votable, LoadSave {
                 }
             }
         },0,60);
+
+        error.name="error";
+        error.color="scarlet";
+        error.description="If your rank got removed you ll obtain this for little time.";
     }
 
     public static String getSubNet(PlayerData pd){
@@ -413,7 +420,12 @@ public class Database implements Votable, LoadSave {
 
     public static SpecialRank getSpecialRank(PlayerData pd){
         if(pd.specialRank==null) return null;
-        return ranks.get(pd.specialRank);
+        SpecialRank sr=ranks.get(pd.specialRank);
+        if(sr==null){
+            pd.specialRank=null;
+            return error;
+        }
+        return sr;
     }
 
     public static boolean hasPerm(Player player,Perm perm){
@@ -456,6 +468,7 @@ public class Database implements Votable, LoadSave {
                 String key=(String)o;
                 ranks.put(key,new SpecialRank(key,(JSONObject) data.get(key),data));
             }
+
         },this::createDefaultRankConfig);
     }
 
