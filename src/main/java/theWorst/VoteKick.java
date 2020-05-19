@@ -8,7 +8,9 @@ import mindustry.entities.type.Player;
 import mindustry.gen.Call;
 import mindustry.net.Packets;
 import theWorst.dataBase.Database;
+import theWorst.dataBase.Rank;
 
+import static mindustry.Vars.player;
 import static mindustry.Vars.playerGroup;
 
 public class VoteKick{
@@ -86,6 +88,7 @@ public class VoteKick{
             Call.sendMessage(Strings.format(Main.prefix+"Vote passed.[scarlet] {0}[] will be banned from the server for {1} minutes.", target.name, (kickDuration/60)));
             target.getInfo().lastKicked = Time.millis() + kickDuration*1000;
             playerGroup.all().each(p -> p.uuid != null && p.uuid.equals(target.uuid), p -> p.con.kick(Packets.KickReason.vote));
+            Database.setRank(target, Rank.griefer);
             restart();
             return false;
         }

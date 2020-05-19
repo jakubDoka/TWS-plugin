@@ -167,13 +167,13 @@ public class Vote implements Interruptible {
         voting = false;
         task.cancel();
         alert.cancel();
-        String result = Main.prefix + "vote-" + message;
+        String result ="vote-" + message;
         if (success) {
             votable.launch(aPackage);
-            Hud.addAd(result+"-done",5,new String[]{"green","gray"});
+            Hud.addAd(result+"-done",10,new String[]{"green","gray"});
         } else {
             addToRecent(aPackage.target);
-            Hud.addAd(result+"-failed",5,new String[]{"scarlet","gray"});
+            Hud.addAd(result+"-failed",10,new String[]{"scarlet","gray"});
         }
     }
 
@@ -185,8 +185,8 @@ public class Vote implements Interruptible {
     @Override
     public String getHudInfo() {
         if(!voting) return null;
-        String color=time<10 && time%2==0 ? "white":"gray";
-        return String.format("[%s]vote for %s %02ds [green] %d [][scarlet] %d [gray]req %d[][]",
+        String color=time<10 && time%2==0 ? "gray":"white";
+        return String.format("[%s]vote for %s %02ds [green] %d [][scarlet] %d [][gray]req %d[][]",
                 color,message,time,yes,no,getRequired());
     }
 }

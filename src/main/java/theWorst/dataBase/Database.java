@@ -96,9 +96,16 @@ public class Database implements Votable, LoadSave {
             }
         });
 
-        Events.on(EventType.PlayerBanEvent.class,e->{
-            netServer.admins.unbanPlayerID(e.player.getInfo().id);
-            setRank(e.player,Rank.griefer);
+        Events.on(EventType.PlayerIpBanEvent.class,e->{
+            netServer.admins.unbanPlayerIP(e.ip);
+            for(PlayerData pd:data.values()){
+                if(pd.ip.equals(e.ip)){
+                    pd.trueRank=Rank.griefer;
+                    pd.getInfo().lastKicked=Time.millis();
+                    bunUnBunSubNet(pd,true);
+                    break;
+                }
+            }
         });
 
         Events.on(EventType.BlockBuildEndEvent.class, e->{
@@ -370,10 +377,8 @@ public class Database implements Votable, LoadSave {
             player=playerGroup.find(p->p.name.equals(pd.originalName));
             if(player==null) return;
         }
-        player.name=pd.originalName+pd.rank.getSuffix();
-        if(rank.permanent){
-            player.isAdmin=rank.isAdmin;
-        }
+        player.name=pd.originalName+rank.getSuffix();
+        player.isAdmin=rank.isAdmin;
     }
 
     public static void setRank(PlayerData pd,Rank rank){
