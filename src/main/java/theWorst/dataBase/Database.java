@@ -215,7 +215,6 @@ public class Database implements Votable, LoadSave {
         try {
             Stat stat=Stat.valueOf(s);
             Array<PlayerData> dt=Array.with(data.values());
-
             while(!dt.isEmpty()){
                 PlayerData best=dt.first();
                 for(int i=1;i<dt.size;i++){
@@ -344,6 +343,20 @@ public class Database implements Votable, LoadSave {
         return res;
     }
 
+    public static Array<String> getAllRussianPlayersIndexes(){
+        Array<String> res=new Array<>();
+        for(String uuid:data.keySet()){
+            PlayerData pd=getData(uuid);
+            for (int i = 0; i < pd.originalName.length(); i++){
+                if(isCharCyrillic(pd.originalName.charAt(i))){
+                    res.add(formLine(pd));
+                    break;
+                }
+            }
+        }
+        return res;
+    }
+
     public static Array<String> getAllPlayersIndexesByRank(String search){
         Array<String> res=new Array<>();
         for(String uuid:data.keySet()){
@@ -447,18 +460,19 @@ public class Database implements Votable, LoadSave {
         player.name=pd.originalName+(pd.specialRank==null ? pd.rank.getSuffix(): getSpecialRank(pd).getSuffix());
     }
 
+    private static boolean isCharCyrillic(final char c){
+        return Character.UnicodeBlock.of(c).equals(Character.UnicodeBlock.CYRILLIC);
+    }
+
     private static boolean isCharCJK(final char c) {
-        if ((Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS)
+        return (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS)
                 || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A)
                 || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B)
                 || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_COMPATIBILITY_FORMS)
                 || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS)
                 || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_RADICALS_SUPPLEMENT)
                 || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION)
-                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.ENCLOSED_CJK_LETTERS_AND_MONTHS)) {
-            return true;
-        }
-        return false;
+                || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.ENCLOSED_CJK_LETTERS_AND_MONTHS);
     }
 
     public void loadRanks(){

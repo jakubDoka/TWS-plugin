@@ -57,7 +57,7 @@ public class Tester {
 
     public void ask(Player player,int idx){
         if(idx>=questions.size){
-            if(tested.get(player.uuid)[1]/(float)questions.size>.8){
+            if(tested.get(player.uuid)[1]==(float)questions.size){
                 player.sendMessage(Main.prefix+"[green]Congratulation you passed the test! You will obtain " +
                         "rank VERIFIED witch means that emergency no longer affects you.");
                 Database.setRank(player, Rank.verified);

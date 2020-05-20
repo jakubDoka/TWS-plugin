@@ -872,28 +872,25 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.<Player>register("search","<searchKey/chinese/sort/online/rank> [invert/normal] [sortType/rankName] ",
-                "Search for player by name, display all chinese players, all online players," +
+        handler.<Player>register("search","<searchKey/chinese/russian/sort/online/rank> [sortType/rankName] [reverse]",
+                "Search for player by name, display all chinese or russian players, all online players," +
                         "all players with specified rank or sorted list of players.You can optionally invert the " +
-                        "list.",(arg,player)->{
-            Array<String> res=new Array<>();
-            if(arg.length>=1) {
+                        "list when using sort option.",(arg,player)->{
+            Array<String> res;
+            if(arg.length==1) {
                 switch (arg[0]) {
                     case "rank":
-                        if(arg.length!=3) {
-                            player.sendMessage(prefix + "Available ranks: " + Arrays.toString(Rank.values()) +
-                                    "\nAvailable special ranks:" + Database.ranks.toString());
-                            return;
-                        }
-                        break;
+                        player.sendMessage(prefix + "Available ranks: " + Arrays.toString(Rank.values()) +
+                                "\nAvailable special ranks:" + Database.ranks.toString());
+                        return;
                     case "sort":
-                        if(arg.length!=3){
-                            player.sendMessage(prefix + "Available sort types: " + Arrays.toString(Stat.values()));
-                            return;
-                        }
-                        break;
+                        player.sendMessage(prefix + "Available sort types: " + Arrays.toString(Stat.values()));
+                        return;
                     case "chinese":
                         res = Database.getAllChinesePlayersIndexes();
+                        break;
+                    case "russian":
+                        res = Database.getAllRussianPlayersIndexes();
                         break;
                     case "online":
                         res = Database.getOnlinePlayersIndexes();
@@ -903,16 +900,15 @@ public class Main extends Plugin {
                         break;
                 }
 
-            }
-            if(arg.length==3 && res.isEmpty()){
-                res =arg[1].equals("sort") ? Database.getSorted(arg[1]):Database.getAllPlayersIndexesByRank(arg[1]);
+            }else {
+                res =arg[0].equals("sort") ? Database.getSorted(arg[1]):Database.getAllPlayersIndexesByRank(arg[1]);
                 if (res == null) {
                     player.sendMessage(prefix + "Invalid sort type, for list of available see /search sort");
                     return;
                 }
-            }
-            if(arg.length>=2 && arg[1].equals("invert")){
-                res.reverse();
+                if(arg.length==3){
+                    res.reverse();
+                }
             }
             for(String s:res){
                 player.sendMessage(s);
@@ -936,7 +932,7 @@ public class Main extends Plugin {
                     return;
                 }
                 if(arg[0].equals("ranks")){
-                    Call.onInfoMessage(player.con, formPage(Database.getRankInfo(), page, "rank info",4));
+                    Call.onInfoMessage(player.con, formPage(Database.getRankInfo(), page, "rank info",6));
                     return;
                 }
                 PlayerData pd=Database.findData(arg[0]);
