@@ -79,10 +79,11 @@ public class ActionManager implements Votable, Interruptible {
                 return false;
             }
             if(!(pd.trueRank.permission.getValue()>=ti.lock)){
-                if(ti.lock==0){
-                   player.sendMessage(Main.noPerm);
+                if(pd.trueRank==Rank.griefer){
+                    player.sendMessage(Main.noPerm);
+                }else {
+                    player.sendMessage(Main.prefix+"You have to be at least "+Rank.verified.getName()+" to interact with this tile.");
                 }
-                player.sendMessage(Main.prefix+"You have to be at least "+Rank.verified.getName()+" to interact with this tile.");
                 return false;
 
             }

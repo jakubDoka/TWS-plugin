@@ -681,7 +681,7 @@ public class Main extends Plugin {
             }
             Package p=actionManager.verify(player,arg[0],0,false);
             if(p==null) return;
-            vote.aVote(actionManager,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((Player)p.obj).name+"[]");
+            vote.aVote(actionManager,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((PlayerData)p.obj).originalName+"[]");
         });
 
         handler.<Player>register("emergency","[off]","Starts emergency.For admins only.",(arg, player) ->{
@@ -910,8 +910,8 @@ public class Main extends Plugin {
                     res.reverse();
                 }
             }
-            for(String s:res){
-                player.sendMessage(s);
+            for(int i=0;i<200 && i<res.size;i++){
+                player.sendMessage(res.get(i));
             }
             if(res.isEmpty()){
                 player.sendMessage(prefix+"No results found.");
