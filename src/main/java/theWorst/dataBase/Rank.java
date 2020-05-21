@@ -46,11 +46,6 @@ public enum Rank implements java.io.Serializable{
         public boolean condition(PlayerData pd) {
             return Time.timeSinceMillis(pd.lastAction)>required;
         }
-    },server(Color.scarlet,Perm.none){
-        {
-            displayed=false;
-            permanent=true;
-        }
     };
 
     Color color;

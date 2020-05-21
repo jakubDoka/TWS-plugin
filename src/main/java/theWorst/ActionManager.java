@@ -53,15 +53,15 @@ public class ActionManager implements Votable, Interruptible {
             if(e.breaking) {
                 ti.lock=0;
             } else {
-                if (Database.getData(e.player).trueRank.permission.getValue() > Perm.high.getValue()) {
+                if (Database.getData(e.player).trueRank.permission.getValue() >= Perm.high.getValue()) {
                     ti.lock=1;
                 }
             }
         });
 
         Events.on(EventType.BlockDestroyEvent.class, e-> {
-            TileInfo ti=data[e.tile.y][e.tile.x];
-            ti.lock=0;
+            data[e.tile.y][e.tile.x].lock=0;
+
         });
 
         Events.on(EventType.ServerLoadEvent.class,e-> netServer.admins.addActionFilter(action -> {

@@ -394,10 +394,10 @@ public class Database implements Votable, LoadSave {
             bunUnBunSubNet(pd, false);
         }
         if(player==null){
-            player=playerGroup.find(p->p.name.equals(pd.originalName));
+            player=playerGroup.find(p->p.con.address.equals(pd.ip));
             if(player==null) return;
         }
-        player.name=pd.originalName+rank.getSuffix();
+        updateName(player,pd);
         player.isAdmin=rank.isAdmin;
     }
 
