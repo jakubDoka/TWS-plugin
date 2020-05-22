@@ -29,6 +29,8 @@ public class Loadout extends Requester implements Interruptible, LoadSave, Votab
     int[] storage = new int[10];
 
     final String STORAGE_SIZE = "storage_size";
+    final String AUTO_LAUNCH_REQ ="autoLaunchReq";
+    final String AUTO_LAUNCH_AMOUNT ="autoLaunchAmount";
     final String colon="[gray]<L>[]";
 
     public Timer.Task autoLaunch;
@@ -37,6 +39,8 @@ public class Loadout extends Requester implements Interruptible, LoadSave, Votab
     public Loadout() {
         super();
         config.put(STORAGE_SIZE, 10000000);
+        config.put(AUTO_LAUNCH_REQ,75);
+        config.put(AUTO_LAUNCH_AMOUNT,2);
 
         Events.on(EventType.GameOverEvent.class ,e->{
             if(!(state.teams.cores(Team.sharded).isEmpty() && playerGroup.isEmpty())){
@@ -54,10 +58,13 @@ public class Loadout extends Requester implements Interruptible, LoadSave, Votab
             int total=0;
             ItemModule content=cores.first().items;
             for(Item i:Main.items){
-                int toLaunch =Math.max(0,content.get(i)-storageSize/2)/2;
-                total+=toLaunch;
-                content.remove(i,toLaunch);
-                storage[getItemIdx(i)]+=toLaunch;
+                int amount = content.get(i);
+                if (amount/(float)storageSize>(config.get(AUTO_LAUNCH_REQ)/100F)){
+                    int toLaunch =(int)(amount*(config.get(AUTO_LAUNCH_AMOUNT)/100F));
+                    total+=toLaunch;
+                    content.remove(i,toLaunch);
+                    storage[getItemIdx(i)]+=toLaunch;
+                }
             }
             if(total==0) return;
             Hud.addAd("Total of [green]"+total+"[] resources were aromatically launched to [orange]loadout[].",10);

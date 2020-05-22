@@ -422,7 +422,6 @@ public class Main extends Plugin {
 
     @Override
     public void registerServerCommands(CommandHandler handler) {
-        handler.removeCommand("say");
         handler.removeCommand("admin");
 
         handler.register("test", "", arg -> {
@@ -499,14 +498,6 @@ public class Main extends Plugin {
                     hud.messages.add(b.toString());
                     Log.info("Message \""+ b.toString()+"\" wos added.");
             }
-        });
-
-        handler.register("say","<text...>", "send message to all players.", arg -> {
-            StringBuilder b=new StringBuilder();
-            for(String s:arg){
-                b.append(s).append(" ");
-            }
-            Call.sendMessage(prefix+b.toString());
         });
 
         handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
