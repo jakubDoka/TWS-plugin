@@ -75,7 +75,7 @@ public class VoteKick{
             return;
         }
         votes += d;
-        voted.add(player.con.address);
+        voted.add(player.uuid);
         if(checkPass()){
             Call.sendMessage(Strings.format(Main.prefix+"[orange]{0}[] has voted on kicking[scarlet] {1}[]. ({2}/{3})\nType [orange]/vote <y/n>[] to agree.",
                     player.name, target.name, votes, Vote.getRequired()));
