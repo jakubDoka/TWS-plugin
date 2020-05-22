@@ -129,7 +129,10 @@ public class ActionManager implements Votable, Interruptible {
             target = playerGroup.find(p -> p.name.equalsIgnoreCase(object));
         }
         if(target==null){
-            target=Main.findPlayer(object);
+            if(!Strings.canParseInt(object)){
+                target=Main.findPlayer(object);
+            }
+
             if(target==null){
                 pd=Database.findData(object);
                 if(pd!=null){

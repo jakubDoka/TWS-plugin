@@ -30,7 +30,7 @@ import java.util.HashSet;
 import static mindustry.Vars.*;
 
 public class Database implements Votable, LoadSave {
-    static HashMap<String,PlayerData> data=new HashMap<>();
+    public static HashMap<String,PlayerData> data=new HashMap<>();
     public static HashMap<String,SpecialRank> ranks=new HashMap<>();
     static HashSet<String> subNets=new HashSet<>();
     public final static String saveFile= Main.directory+"database.ser";

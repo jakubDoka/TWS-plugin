@@ -381,7 +381,8 @@ public class Main extends Plugin {
     public static String cleanName(String name, boolean withRank){
         while (name.contains("[")){
             int first=name.indexOf("["),last=name.indexOf("]");
-            name=name.substring(0,first)+name.substring(last+1);
+            if(first==-1 || last==-1 || last<first) break;
+            else name=name.substring(0,first)+name.substring(last+1);
         }
         if(withRank){
             while (name.contains("<")){
@@ -425,7 +426,11 @@ public class Main extends Plugin {
         handler.removeCommand("admin");
 
         handler.register("test", "", arg -> {
-            loadout.autoLaunch.run();
+            for(PlayerData pd:Database.data.values()){
+                Log.info(pd.originalName);
+                Log.info(pd.serverId);
+                Log.info(cleanName(pd.originalName));
+            }
         });
 
         handler.register("w-help","<ranks/factory/hud>","Shows better explanation and more information" +
