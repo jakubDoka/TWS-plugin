@@ -1,8 +1,12 @@
-apply plugin: "java"
+plugins{
+    id 'java-library'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
 
 version '1.0'
 
 sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories{
     mavenCentral()
@@ -11,7 +15,7 @@ repositories{
 
 ext{
     //the build number that this plugin is made for
-    mindustryVersion = 'v104'
+    mindustryVersion = 'v104.6'
 }
 
 dependencies{
@@ -20,9 +24,12 @@ dependencies{
     compile fileTree(include: ['*.jar'], dir: 'libs')
 }
 
-jar{
-    version = null
-    from{
-        configurations.runtimeClasspath.collect{it.isDirectory() ? it : zipTree(it)}
-    }
+jar {
+    enabled = false
+    dependsOn(shadowJar)
+}
+
+shadowJar {
+    archiveFileName = "TWS-plugin.jar"
+    minimize()
 }
