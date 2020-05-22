@@ -141,9 +141,6 @@ public class Database implements Votable, LoadSave {
             if(pd==null) return;
             pd.connect(player);
             pd.lastAction= Time.millis();
-            if(player.isLocal){
-                pd.trueRank=Rank.server;
-            }
             if(pd.rank==Rank.AFK){
                 pd.rank=pd.trueRank;
             }

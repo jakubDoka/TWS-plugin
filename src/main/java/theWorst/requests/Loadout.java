@@ -1,6 +1,7 @@
 package theWorst.requests;
 
 import arc.Events;
+import arc.struct.Array;
 import arc.util.Timer;
 import mindustry.entities.type.Player;
 import mindustry.game.EventType;
@@ -9,6 +10,7 @@ import mindustry.game.Teams;
 import mindustry.gen.Call;
 import mindustry.type.Item;
 import mindustry.world.blocks.storage.CoreBlock;
+import mindustry.world.modules.ItemModule;
 import org.json.simple.JSONObject;
 import theWorst.Hud;
 import theWorst.Main;
@@ -18,8 +20,8 @@ import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
-
-import static mindustry.Vars.*;
+import static mindustry.Vars.playerGroup;
+import static mindustry.Vars.state;
 
 
 public class Loadout extends Requester implements Interruptible, LoadSave, Votable {
@@ -28,6 +30,10 @@ public class Loadout extends Requester implements Interruptible, LoadSave, Votab
 
     final String STORAGE_SIZE = "storage_size";
     final String colon="[gray]<L>[]";
+
+    public Timer.Task autoLaunch;
+    int autoLatchFrequency =3*60;
+
     public Loadout() {
         super();
         config.put(STORAGE_SIZE, 10000000);
@@ -38,6 +44,24 @@ public class Loadout extends Requester implements Interruptible, LoadSave, Votab
                 Hud.addAd("[green]All resources were aromatically launched to loadout.[]",30);
             }
         });
+        autoLaunch=Timer.schedule(()->{
+            Array<CoreBlock.CoreEntity> cores=state.teams.cores(Team.sharded);
+            if(cores.isEmpty()) return;
+            int storageSize=0;
+            for(CoreBlock.CoreEntity ce:cores){
+                storageSize+=ce.block.itemCapacity;
+            }
+            int total=0;
+            ItemModule content=cores.first().items;
+            for(Item i:Main.items){
+                int toLaunch =Math.max(0,content.get(i)-storageSize/2)/2;
+                total+=toLaunch;
+                content.remove(i,toLaunch);
+                storage[getItemIdx(i)]+=toLaunch;
+            }
+            if(total==0) return;
+            Hud.addAd("Total of [green]"+total+"[] resources were aromatically launched to [orange]loadout[].",10);
+        },0, autoLatchFrequency);
     }
 
     public Item getItemByName(String name) {

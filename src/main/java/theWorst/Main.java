@@ -425,8 +425,7 @@ public class Main extends Plugin {
         handler.removeCommand("admin");
 
         handler.register("test", "", arg -> {
-            Hud.addAd("brah",10);
-            Log.info("brah");
+            loadout.autoLaunch.run();
         });
 
         handler.register("w-help","<ranks/factory/hud>","Shows better explanation and more information" +
