@@ -124,13 +124,13 @@ public class Database implements Votable, LoadSave {
             }
         });
 
-        Events.on(EventType.PlayerJoin.class, e -> {
+        Events.on(EventType.PlayerConnect.class, e -> {
             PlayerData pd;
             Player player=e.player;
             String uuid=player.uuid;
             if(!data.containsKey(uuid)) {
                 data.put(uuid,new PlayerData(player));
-                Hud.addAd("We have a newcomer [orange]"+player.name+"[].",30);
+                Hud.addAd("We have a newcomer [orange]"+player.name+"[white].",30);
                 pd=getData(uuid);
                 for(Setting s:Setting.values()){
                     pd.settings.add(s.name());
@@ -151,14 +151,13 @@ public class Database implements Votable, LoadSave {
                 updateName(player,pd);
             }
             player.isAdmin=pd.trueRank.isAdmin;
+            Call.sendMessage("[accent]" + player.name + "[accent], with id " + pd.serverId + ", has connected");
         });
 
         Events.on(EventType.PlayerLeave.class, e->{
             PlayerData pd=getData(e.player);
             pd.disconnect();
-            if(pd.trueRank==Rank.newcomer){
-                Call.sendMessage(Main.prefix+"[gray]"+e.player.name+"s id is "+getData(e.player).serverId);
-            }
+            Call.sendMessage("[accent]" + e.player.name + "[accent], with id " + pd.serverId + ", has disconnected");
         });
 
         afkThread=Timer.schedule(()->{
@@ -414,7 +413,7 @@ public class Database implements Votable, LoadSave {
         for(SpecialRank sr:ranks.values()){
             if((sr.stat==stat || stat==null) && sr.condition(pd)){
                 if(specialRank==null || specialRank.value<sr.value){
-                    Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] obtained "+sr.getSuffix()+" rank.");
+                    Call.sendMessage(Main.prefix+"[orange]"+player.name+"[white] obtained "+sr.getSuffix()+" rank.");
                     pd.specialRank=sr.name;
                     specialRank=sr;
                     player.name=pd.originalName+sr.getSuffix();
@@ -423,7 +422,7 @@ public class Database implements Votable, LoadSave {
             }
         }
         if(set || specialRank==null || specialRank.stat!=stat)return;
-        Call.sendMessage(Main.prefix+"[orange]"+player.name+"[] lost his "+specialRank.getSuffix()+" rank.");
+        Call.sendMessage(Main.prefix+"[orange]"+player.name+"[white] lost his "+specialRank.getSuffix()+" rank.");
         pd.specialRank=null;
         player.name=pd.originalName+pd.rank.getSuffix();
     }

@@ -69,7 +69,7 @@ public class Vote implements Interruptible {
         restart();
         addVote(requester,"y");
         Call.sendMessage(Main.prefix +"[orange]"+  requester.name +
-                "[] started vote for " + message + ". Send a message with \"y\" to agree or \"n\" to disagree.");
+                "[white] started vote for " + message + ". Send a message with \"y\" to agree or \"n\" to disagree.");
     }
 
     public void restart(){

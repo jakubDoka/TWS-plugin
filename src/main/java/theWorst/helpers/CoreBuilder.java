@@ -79,7 +79,7 @@ public class CoreBuilder implements Votable {
         if(core==null) return;
         Call.onConstructFinish(world.tile(x, y), core_type, 0, (byte) 0, player.getTeam(), false);
         if (world.tile(player.tileX(), player.tileY()).block() == core_type) {
-            Call.sendMessage(Main.prefix + "Player [green]" + player.name + " []has taken a portion of resources to " +
+            Call.sendMessage(Main.prefix + "Player [green]" + player.name + "[white] has taken a portion of resources to " +
                     "build a core on coordinates "+x+" "+y+"!");
             for (Item item : Main.items) {
                 core.items.remove(item, cost);

@@ -134,6 +134,8 @@ public class Main extends Plugin {
                 Database.updateRank(player,Stat.messageCount);
                 return msgColor+message;
             });
+            //so we can replace it with our own messages
+            Administration.Config.showConnectMessages.set(false);
             load_items();
             serverPlayer = new ServerPlayer();
             mapManager = new MapManager();
@@ -425,11 +427,7 @@ public class Main extends Plugin {
         handler.removeCommand("admin");
 
         handler.register("test", "", arg -> {
-            for(PlayerData pd:Database.data.values()){
-                Log.info(pd.originalName);
-                Log.info(pd.serverId);
-                Log.info(cleanName(pd.originalName));
-            }
+            player.add();
         });
 
         handler.register("w-help","<ranks/factory/hud>","Shows better explanation and more information" +
@@ -840,7 +838,7 @@ public class Main extends Plugin {
             }
             player.onDeath();
             player.kill();
-            Call.sendMessage(prefix+player.name+" committed suicide.");
+            Call.sendMessage(prefix+player.name+"[white] committed suicide.");
             Timer.schedule(()->Call.sendMessage(prefix+"F..."),5);
         });
 
@@ -1030,8 +1028,8 @@ public class Main extends Plugin {
                 player.sendMessage(prefix+"Player not found.");
                 return;
             }
-            player.sendMessage("[#ffdfba][DM to "+other.name+"][]:"+b.toString().replace(arg[0],""));
-            other.sendMessage("[#ffdfba][DM from "+player.name+"][]:"+b.toString().replace(arg[0],""));
+            player.sendMessage("[#ffdfba][DM to "+other.name+"][white]:"+b.toString().replace(arg[0],""));
+            other.sendMessage("[#ffdfba][DM from "+player.name+"][white]:"+b.toString().replace(arg[0],""));
         });
     }
 }
