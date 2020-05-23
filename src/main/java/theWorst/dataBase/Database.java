@@ -319,7 +319,7 @@ public class Database implements Votable, LoadSave {
         Array<String> res=new Array<>();
         for(String uuid:data.keySet()){
             PlayerData pd=getData(uuid);
-            if(search!=null && !pd.originalName.startsWith(search)) continue;
+            if(search!=null && !pd.originalName.toLowerCase().startsWith(search.toLowerCase())) continue;
             res.add(formLine(pd));
         }
         return res;
