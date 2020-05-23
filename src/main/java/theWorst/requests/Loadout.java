@@ -42,12 +42,6 @@ public class Loadout extends Requester implements Interruptible, LoadSave, Votab
         config.put(AUTO_LAUNCH_REQ,75);
         config.put(AUTO_LAUNCH_AMOUNT,2);
 
-        Events.on(EventType.GameOverEvent.class ,e->{
-            if(!state.teams.cores(Team.sharded).isEmpty() && !playerGroup.isEmpty()){
-                launch(new Package("all",1000000,false,playerGroup.all().first()));
-                Hud.addAd("[green]All resources were aromatically launched to loadout.[]",30);
-            }
-        });
         autoLaunch=Timer.schedule(()->{
             Array<CoreBlock.CoreEntity> cores=state.teams.cores(Team.sharded);
             if(cores.isEmpty()) return;
