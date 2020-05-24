@@ -1,24 +1,18 @@
 package theWorst.requests;
 
+import arc.Events;
+import arc.struct.Array;
+import arc.struct.ArrayMap;
 import arc.util.Log;
+import arc.util.Timer;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
-import mindustry.game.Team;
+import mindustry.entities.type.base.BuilderDrone;
+import mindustry.game.EventType;
 import mindustry.gen.Call;
 import mindustry.type.Item;
 import mindustry.type.UnitType;
-import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONObject;
-
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-
-import arc.struct.ArrayMap;
-import arc.struct.Array;
-
-import arc.util.Timer;
 import theWorst.Main;
 import theWorst.Package;
 import theWorst.dataBase.Database;
@@ -26,7 +20,14 @@ import theWorst.interfaces.Interruptible;
 import theWorst.interfaces.LoadSave;
 import theWorst.interfaces.Votable;
 
-import static mindustry.Vars.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+
+import static java.lang.Math.pow;
+import static java.lang.Math.sqrt;
+import static mindustry.Vars.content;
+import static mindustry.Vars.world;
 
 public class Factory extends Requester implements Interruptible, LoadSave, Votable {
     final int UNIT_COUNT = 13;
@@ -45,7 +46,7 @@ public class Factory extends Requester implements Interruptible, LoadSave, Votab
 
     final String colon="[gray]<F>[]";
 
-    final String configFile = "factoryConfig.json";
+    final String configFile = Main.directory+"factoryConfig.json";
 
     ArrayMap<String, int[]> stats = new ArrayMap<>();
     Array<String> statKeys = new Array<>();
@@ -65,6 +66,29 @@ public class Factory extends Requester implements Interruptible, LoadSave, Votab
         for (idx i:idx.values()){
             statKeys.add(i.name());
         }
+
+        Events.on(EventType.BuildSelectEvent.class, e -> {
+            Array<Request> requests = getRequests();
+            boolean canPlace = true;
+            for (Request r : requests) {
+                double dist = sqrt((pow(e.tile.x - (float) (r.aPackage.x / 8), 2) +
+                        pow(e.tile.y - (float) (r.aPackage.y / 8), 2)));
+                if (dist < 5) {
+                    canPlace = false;
+                    break;
+                }
+            }
+            if (!canPlace) {
+                e.tile.removeNet();
+                if (e.builder instanceof BuilderDrone) {
+                    ((BuilderDrone) e.builder).kill();
+                    Call.sendMessage(Main.prefix + "Builder Drone wos destroyed after it attempt to build on drop point");
+                } else if (e.builder instanceof Player) {
+                    ((Player) e.builder).sendMessage(Main.prefix + "You cannot build on unit drop point.");
+                }
+            }
+
+        });
 
         config();
     }
@@ -299,7 +323,7 @@ public class Factory extends Requester implements Interruptible, LoadSave, Votab
     }
 
     public void config() {
-        Main.loadJson(Main.directory+configFile,
+        Main.loadJson(configFile,
                 (settings)->{
                     for (Object setting : settings.keySet()) {
                         if (getUnitByName((String) setting) == null) {
@@ -341,8 +365,7 @@ public class Factory extends Requester implements Interruptible, LoadSave, Votab
     }
 
     public void createDefaultConfig() {
-        String path = Main.directory + configFile;
-        try (FileWriter file = new FileWriter(path)) {
+        try (FileWriter file = new FileWriter(configFile)) {
 
             JSONObject unit = new JSONObject();
             for (String key : statKeys) {
@@ -351,7 +374,7 @@ public class Factory extends Requester implements Interruptible, LoadSave, Votab
             JSONObject config = new JSONObject();
             config.put("eruptor", unit);
             file.write(config.toJSONString());
-            Log.info("Default " + path + " successfully created.Edit it and use apply-config command.");
+            Log.info("Default " + configFile + " successfully created.Edit it and use apply-config command.");
         } catch (IOException ex) {
             Log.info("Error when creating default config.");
         }

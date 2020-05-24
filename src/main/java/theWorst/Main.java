@@ -7,8 +7,6 @@ import arc.struct.ArrayMap;
 import arc.util.*;
 import mindustry.entities.type.BaseUnit;
 import mindustry.entities.type.Player;
-import mindustry.entities.type.base.BuilderDrone;
-import mindustry.game.EventType.BuildSelectEvent;
 import mindustry.game.EventType.ServerLoadEvent;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.game.Team;
@@ -32,25 +30,19 @@ import theWorst.interfaces.runLoad;
 import theWorst.interfaces.runSave;
 import theWorst.requests.Factory;
 import theWorst.requests.Loadout;
-import theWorst.requests.Request;
 import theWorst.requests.Requester;
 
 import java.io.*;
 import java.util.Arrays;
 
-import static java.lang.Math.*;
+import static java.lang.Math.min;
 import static mindustry.Vars.*;
 
 public class Main extends Plugin {
-    //TOdo test vote - there are new visual cnages - let vote fail
-    //TODO test action manager - try interact with staff that verified built as griefer or newcomer
-    //TODO test ban - bun person via player list, he should be able to rejoin but as griefer only
-    //TODO test tester - just test if griefer cannot do test
-    //TODO test vote kick - just make sure it works properly
-
-    static final String configFile ="settings.json";
-    static final String saveFile = "save.json";
     public static final String directory = "config/mods/The_Worst/";
+    static final String saveFile =directory + "save.json";
+    static final String configFile =directory + "settings.json";
+
     public static final String prefix = "[coral][[[scarlet]Server[]]:[]";
     public static final String noPerm = prefix+"You have no permission to do this. Please submit your appeal in discord";
 
@@ -64,6 +56,8 @@ public class Main extends Plugin {
     public final int pageSize=15;
     static Array<Interruptible> interruptibles = new Array<>();
 
+
+
     Timer.Task autoSaveThread;
 
     int defaultAutoSaveFrequency=5;
@@ -71,6 +65,7 @@ public class Main extends Plugin {
     MapManager mapManager;
     Factory factory;
     ServerPlayer serverPlayer;
+    BotThread bot;
 
     ActionManager actionManager =new ActionManager();
     Loadout loadout = new Loadout();
@@ -84,32 +79,8 @@ public class Main extends Plugin {
 
     public Main() {
 
+
         Events.on(WorldLoadEvent.class, e -> interruptibles.forEach(Interruptible::interrupt));
-
-
-        Events.on(BuildSelectEvent.class, e -> {
-            Array<Request> requests = factory.getRequests();
-            if (requests.size > 0) {
-                boolean canPlace = true;
-                for (Request r : requests) {
-                    double dist = sqrt((pow(e.tile.x - (float) (r.aPackage.x / 8), 2) +
-                            pow(e.tile.y - (float) (r.aPackage.y / 8), 2)));
-                    if (dist < 5) {
-                        canPlace = false;
-                        break;
-                    }
-                }
-                if (!canPlace) {
-                    e.tile.removeNet();
-                    if (e.builder instanceof BuilderDrone) {
-                        ((BuilderDrone) e.builder).kill();
-                        Call.sendMessage(prefix + "Builder Drone wos destroyed after it attempt to build on drop point");
-                    } else if (e.builder instanceof Player) {
-                        ((Player) e.builder).sendMessage(prefix + "You cannot build on unit drop point.");
-                    }
-                }
-            }
-        });
 
         Events.on(ServerLoadEvent.class, e -> {
             netServer.admins.addChatFilter((player,message)->{
@@ -153,8 +124,12 @@ public class Main extends Plugin {
             autoSave(defaultAutoSaveFrequency);
             hud.update();
             hud.startCycle(10);
+            bot = new BotThread(Thread.currentThread());
+
         });
     }
+
+
 
     public static void loadJson(String filename, runLoad load, Runnable save){
         try (FileReader fileReader = new FileReader(filename)) {
@@ -210,8 +185,7 @@ public class Main extends Plugin {
     public void load() {
         dataBase.loadData();
         mapManager.load();
-        String path = directory + saveFile;
-        loadJson(path,(data)->{
+        loadJson(saveFile,(data)->{
             for (String k : loadSave.keys()) {
                 if (data.containsKey(k) && loadSave.containsKey(k)) {
                     loadSave.get(k).load((JSONObject) data.get(k));
@@ -221,7 +195,7 @@ public class Main extends Plugin {
     }
 
     public void save() {
-        saveJson(directory+saveFile,"Save updated.",()->{
+        saveJson(saveFile,"Save updated.",()->{
             JSONObject saveData = new JSONObject();
             loadSave.keys().forEach((k) -> saveData.put(k, loadSave.get(k).save()));
             return saveData;
@@ -231,8 +205,7 @@ public class Main extends Plugin {
     }
 
     public void config(){
-        String path = directory + configFile;
-        loadJson(path,(data)->{
+        loadJson(configFile,(data)->{
             JSONObject content=(JSONObject)data.get("loadout");
             for(Object o:content.keySet()){
                 loadout.getConfig().put((String)o,getInt(content.get(o)));
@@ -246,7 +219,7 @@ public class Main extends Plugin {
     }
 
     private void createDefaultConfig() {
-        saveJson(directory+configFile,null,()->{
+        saveJson(configFile,null,()->{
             JSONObject saveData = new JSONObject();
             JSONObject load = new JSONObject();
             for(String o:loadout.getConfig().keys()){
@@ -426,17 +399,18 @@ public class Main extends Plugin {
     public void registerServerCommands(CommandHandler handler) {
         handler.removeCommand("admin");
 
-        handler.register("test", "", arg -> {
-            player.add();
-        });
+        handler.register("test","",arg->{
+                });
 
         handler.register("w-help","<ranks/factory/hud>","Shows better explanation and more information" +
-                "acout entered topic.",arg->{
+                "about entered topic.",arg->{
             switch (arg[0]){
                 case "ranks":
                     SpecialRank.help();
+                    break;
                 case "factory":
                     Log.info("Missing.");
+                    break;
                 case "hud":
                     Log.info("Missing.");
             }
@@ -525,42 +499,15 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.register("w-set-rank", "<uuid/name/index> <rank/restart>", "", arg -> {
-            PlayerData pd = Database.findData(arg[0]);
-            if (pd == null) {
-                Log.info("Player not found.");
-                return;
-            }
-            try {
-                Database.setRank(pd, Rank.valueOf(arg[1]));
-                Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
-                Call.sendMessage("Rank of player [orange]"+ pd.originalName+"[] is now " +pd.rank.getName() +".");
-            } catch (IllegalArgumentException e) {
-                if(arg[1].equals("restart")) {
-                    pd.specialRank = null;
-                    Call.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] wos restarted.");
-                    Log.info("Rank of player " + pd.originalName + " wos restarted.");
-                }else if(!Database.ranks.containsKey(arg[1])){
+        handler.register("w-set-rank", "<uuid/name/id> <rank/restart>", "", arg -> {
+            switch (Database.setRankViaCommand(arg[0],arg[1],true)){
+                case notFound:
+                    Log.info("Player not found");
+                    break;
+                case invalidRank:
                     Log.info("Rank not found.\nRanks:" + Arrays.toString(Rank.values())+"\n" +
                             "Custom ranks:"+Database.ranks.keySet());
-                    return;
-                }else {
-                    pd.specialRank=arg[1];
-                    Log.info("Rank of player " + pd.originalName + " is now " + pd.specialRank + ".");
-                    SpecialRank sr=Database.getSpecialRank(pd);
-                    if(sr!=null){
-                        Call.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + sr.getSuffix() + ".");
-                    }
-                }
             }
-            Player player = findPlayer(arg[0]);
-            if (player == null) {
-                player = playerGroup.find(p-> p.uuid.equalsIgnoreCase(arg[0]));
-                if (player == null) {
-                    return;
-                }
-            }
-           Database.updateName(player,pd);
         });
 
         handler.register("w-info", "<uuid/name/index>", "Displays info about player.", arg -> {
@@ -971,51 +918,17 @@ public class Main extends Plugin {
                         "become verified player.",(args, player) -> tester.processAnswer(player,args[0]));
 
         handler.<Player>register("set-rank","<playerName/uuid/ID> <rank/restart>","Command for admins.",(args,player)->{
-            if(!player.isAdmin){
-                player.sendMessage(prefix+"You are not admin.");
-                return;
-            }
-
-            PlayerData pd=Database.findData(args[0]);
-            if(pd==null ){
-                player.sendMessage(prefix+"Player not found.");
-                return;
-            }
-
-            if(pd==Database.getData(player)){
-                player.sendMessage(prefix+"You cannot change your rank.");
-                return;
-            }
-
-            try{
-                Rank rank=Rank.valueOf(args[1]);
-                if (rank.isAdmin){
-                    player.sendMessage(prefix+"You cannot use this rank.");
-                    return;
-                }
-                player.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + rank.getName() + ".");
-                Database.setRank(pd,rank);
-            }catch (IllegalArgumentException e){
-                if(args[1].equals("restart")){
-                    pd.specialRank=null;
-                    Call.sendMessage("Rank of player [orange]" + pd.originalName + "[] wos restarted.");
-                } else if(!Database.ranks.containsKey(args[1])){
+            switch (Database.setRankViaCommand(args[0],args[1],false)){
+                case notFound:
+                    player.sendMessage(prefix+"Player not found");
+                    break;
+                case invalidRank:
                     player.sendMessage(prefix+"Rank not found.\nRanks:" + Arrays.toString(Rank.values())+"\n" +
                             "Custom ranks:"+Database.ranks.keySet());
-                    return;
-                }else {
-                    pd.specialRank=args[1];
-                    SpecialRank sr=Database.getSpecialRank(pd);
-                    if(sr==null) return;
-                    Call.sendMessage(prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + sr.getSuffix() + ".");
-
-                }
+                    break;
+                case notPermitted:
+                    player.sendMessage(prefix+"Changing or assigning admin rank can be done only thorough terminal.");
             }
-
-
-            Player p=findPlayer(args[0]);
-            if(p==null)return;
-            Database.updateName(p,pd);
         });
 
         handler.<Player>register("dm","<player> <text...>", "Send direct message to player.", (arg,player) -> {

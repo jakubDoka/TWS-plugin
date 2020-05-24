@@ -19,17 +19,23 @@ ext{
 }
 
 dependencies{
+    implementation "org.javacord:javacord:3.0.6"
+    runtimeOnly 'org.apache.logging.log4j:log4j-core:2.11.0'
+
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
     compile fileTree(include: ['*.jar'], dir: 'libs')
 }
 
-jar {
+/*jar {
     enabled = false
     dependsOn(shadowJar)
-}
+}*/
 
-shadowJar {
-    archiveFileName = "TWS-plugin.jar"
-    minimize()
+jar{
+    version = null
+    from{
+        configurations.runtimeClasspath.collect{it.isDirectory() ? it : zipTree(it)}
+    }
 }
+compileJava.options.encoding = 'UTF-8'

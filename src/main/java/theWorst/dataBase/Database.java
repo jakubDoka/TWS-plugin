@@ -24,6 +24,7 @@ import theWorst.interfaces.Votable;
 import theWorst.requests.Loadout;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -151,13 +152,13 @@ public class Database implements Votable, LoadSave {
                 updateName(player,pd);
             }
             player.isAdmin=pd.trueRank.isAdmin;
-            Call.sendMessage("[accent]" + player.name + "[accent], with id " + pd.serverId + ", has connected");
+            Call.sendMessage("[accent]" + player.name + "[accent] (ID:" + pd.serverId +") has connected");
         });
 
         Events.on(EventType.PlayerLeave.class, e->{
             PlayerData pd=getData(e.player);
             pd.disconnect();
-            Call.sendMessage("[accent]" + e.player.name + "[accent], with id " + pd.serverId + ", has disconnected");
+            Call.sendMessage("[accent]" + e.player.name + "[accent] (ID:" + pd.serverId +") has disconnected");
         });
 
         afkThread=Timer.schedule(()->{
@@ -395,6 +396,58 @@ public class Database implements Votable, LoadSave {
         }
         updateName(player,pd);
         player.isAdmin=rank.isAdmin;
+    }
+
+    public enum Res{
+        notFound,
+        notPermitted,
+        invalidRank,
+        success
+    }
+
+    public static Res setRankViaCommand(String target,String rank,boolean terminal){
+
+        PlayerData pd = Database.findData(target);
+        if (pd == null) {
+            return Res.notFound;
+        }
+        if (!terminal && pd.trueRank.isAdmin){
+            return Res.notPermitted;
+        }
+        try {
+            Rank r=Rank.valueOf(rank);
+            if(!terminal && r.isAdmin){
+                return Res.notPermitted;
+            }
+            Database.setRank(pd,r );
+            Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
+            Call.sendMessage("Rank of player [orange]"+ pd.originalName+"[] is now " +pd.rank.getName() +".");
+        } catch (IllegalArgumentException e) {
+            if(rank.equals("restart")) {
+                pd.specialRank = null;
+                Call.sendMessage(Main.prefix+"Rank of player [orange]" + pd.originalName + "[] wos restarted.");
+                Log.info("Rank of player " + pd.originalName + " wos restarted.");
+            }else if(!Database.ranks.containsKey(rank)){
+
+                return Res.invalidRank;
+            }else {
+                pd.specialRank=rank;
+                SpecialRank sr=Database.getSpecialRank(pd);
+                if(sr!=null){
+                    Log.info("Rank of player " + pd.originalName + " is now " + pd.specialRank + ".");
+                    Call.sendMessage(Main.prefix+"Rank of player [orange]" + pd.originalName + "[] is now " + sr.getSuffix() + ".");
+                }
+            }
+        }
+        Player found = playerGroup.find(p->p.con.address.equals(pd.ip));
+        if (found == null) {
+            found = playerGroup.find(p-> p.uuid.equalsIgnoreCase(target));
+            if (found == null) {
+                return Res.success;
+            }
+        }
+        Database.updateName(found,pd);
+        return Res.success;
     }
 
     public static void setRank(PlayerData pd,Rank rank){

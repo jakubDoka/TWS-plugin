@@ -23,7 +23,7 @@ public class MapManager implements Votable {
     final String saveFile=Main.directory+"mapData.ser";
     static final int defaultAirWave=1000000;
     public Map currentMap=maps.all().first();
-    HashMap<String,mapData> data=new HashMap<>();
+    static HashMap<String,mapData> data=new HashMap<>();
 
     public MapManager(){
 
@@ -38,6 +38,11 @@ public class MapManager implements Votable {
             }
             Hud.addAd(getWaveInfo(),30);
         });
+    }
+
+    public static double getMapRating(Map map){
+        if(data.get(map.name())==null) return 5d;
+        return data.get(map.name()).getRating();
     }
 
     @Override
@@ -82,7 +87,7 @@ public class MapManager implements Votable {
         return new Package(object, map, player);
     }
 
-    private Map findMap(String object) {
+    public static Map findMap(String object) {
         Array<Map> mapList = maps.all();
         if (Main.isNotInteger(object)) {
             return maps.all().find(m -> m.name().equalsIgnoreCase(object.replace('_', ' '))
@@ -113,7 +118,7 @@ public class MapManager implements Votable {
         return res;
     }
 
-    public Array<String>info() {
+    public Array<String> info() {
         Array<mindustry.maps.Map> maps=Vars.maps.customMaps();
         Array<String> res=new Array<>();
         for (int i=0;i<maps.size;i++){
