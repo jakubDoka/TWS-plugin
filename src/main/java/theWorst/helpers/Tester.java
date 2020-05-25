@@ -59,7 +59,7 @@ public class Tester {
         if(idx>=questions.size){
             if(tested.get(player.uuid)[1]==(float)questions.size){
                 player.sendMessage(Main.prefix+"[green]Congratulation you passed the test! You will obtain " +
-                        "rank VERIFIED witch means that emergency no longer affects you.");
+                        "rank VERIFIED which means that emergency no longer affects you.");
                 Database.setRank(player, Rank.verified);
                 tested.removeKey(player.uuid);
                 return;
@@ -96,7 +96,7 @@ public class Tester {
         }
         if(answer.equals("start")){
             if(!tested.containsKey(uuid)){
-                player.sendMessage(Main.prefix+"Test started.");
+                player.sendMessage(Main.prefix+"Test started. Type /test (#) to answer.");
                 tested.put(uuid,new int[2]);
                 ask(player,0);
                 return;
