@@ -399,12 +399,12 @@ public class Main extends Plugin {
     public void registerServerCommands(CommandHandler handler) {
         handler.removeCommand("admin");
 
-        handler.register("test","",arg->{
+        handler.register("test","",args->{
                 });
 
         handler.register("w-help","<ranks/factory/hud>","Shows better explanation and more information" +
-                "about entered topic.",arg->{
-            switch (arg[0]){
+                "about entered topic.",args->{
+            switch (args[0]){
                 case "ranks":
                     SpecialRank.help();
                     break;
@@ -418,8 +418,8 @@ public class Main extends Plugin {
 
         handler.register("w-hud","[speed/remove/add] [timeInMin/idx/all/message...]","Set speed of " +
                 "message cycle, remove messages by index and add messages to cycle. Use /hud to see messages you added."
-                ,arg->{
-            if(arg.length==0){
+                ,args->{
+            if(args.length==0){
 
                 StringBuilder b=new StringBuilder();
                 for(int i=0;i<hud.messages.size;i++){
@@ -428,26 +428,26 @@ public class Main extends Plugin {
                 Log.info("Message will change every "+hud.speed+"min, messages are:\n"+b.toString()+"");
                 return;
             }
-            if(notEnoughArgs(null,2,arg)) return;
-            switch (arg[0]){
+            if(notEnoughArgs(null,2,args)) return;
+            switch (args[0]){
                 case "speed":
-                    if(!Strings.canParseInt(arg[1])){
+                    if(!Strings.canParseInt(args[1])){
                         Log.info("Speed has to be integer.");
                         return;
                     }
-                    hud.startCycle(Integer.parseInt(arg[1]));
+                    hud.startCycle(Integer.parseInt(args[1]));
                     Log.info("Speed changed.");
                     return;
                 case "remove":
-                    if(arg[1].equals("all")){
+                    if(args[1].equals("all")){
                         hud.messages.clear();
                         Log.info("All erased.");
                     }
-                    if(!Strings.canParseInt(arg[1])){
+                    if(!Strings.canParseInt(args[1])){
                         Log.info("Index has to be integer.");
                         return;
                     }
-                    int val=Integer.parseInt(arg[1]);
+                    int val=Integer.parseInt(args[1]);
 
                     if(hud.messages.isEmpty()){
                         Log.info("No messages to erase.");
@@ -464,20 +464,20 @@ public class Main extends Plugin {
                     return;
                 case "add":
                     StringBuilder b=new StringBuilder();
-                    for(int i=1;i<arg.length;i++){
-                        b.append(arg[i]);
+                    for(int i=1;i<args.length;i++){
+                        b.append(args[i]);
                     }
                     hud.messages.add(b.toString());
                     Log.info("Message \""+ b.toString()+"\" wos added.");
             }
         });
 
-        handler.register("w-load", "Reloads theWorst saved data.", arg -> load());
+        handler.register("w-load", "Reloads theWorst saved data.", args -> load());
 
-        handler.register("w-save", "Saves theWorst data.", arg -> save());
+        handler.register("w-save", "Saves theWorst data.", args -> save());
 
-        handler.register("w-unkick", "<ID/uuid>", "Erases kick status of player player.", arg -> {
-            PlayerData pd = Database.findData(arg[0]);
+        handler.register("w-unkick", "<ID/uuid>", "Erases kick status of player player.", args -> {
+            PlayerData pd = Database.findData(args[0]);
             if (pd == null) {
                 Log.info("Player not found.");
                 return;
@@ -487,10 +487,10 @@ public class Main extends Plugin {
         });
 
         handler.register("w-database", "[search/online]", "Shows database,list of all players that " +
-                "ewer been on server.Use search as in browser.", arg ->{
+                "ewer been on server.Use search as in browser.", args ->{
             Array<String> data;
-            if(arg.length==1){
-                data=arg[0].equals("online") ? Database.getOnlinePlayersIndexes() :Database.getAllPlayersIndexes(arg[0]);
+            if(args.length==1){
+                data=args[0].equals("online") ? Database.getOnlinePlayersIndexes() :Database.getAllPlayersIndexes(args[0]);
             }else {
                 data=Database.getAllPlayersIndexes(null);
             }
@@ -499,8 +499,8 @@ public class Main extends Plugin {
             }
                 });
 
-        handler.register("w-set-rank", "<uuid/name/id> <rank/restart>", "", arg -> {
-            switch (Database.setRankViaCommand(arg[0],arg[1],true)){
+        handler.register("w-set-rank", "<uuid/name/id> <rank/restart> [reason...]", "", args -> {
+            switch (Database.setRankViaCommand(null,args[0],args[1],args.length==3 ? args[2] : null)){
                 case notFound:
                     Log.info("Player not found");
                     break;
@@ -510,8 +510,8 @@ public class Main extends Plugin {
             }
         });
 
-        handler.register("w-info", "<uuid/name/index>", "Displays info about player.", arg -> {
-            PlayerData pd = Database.findData(arg[0]);
+        handler.register("w-info", "<uuid/name/index>", "Displays info about player.", args -> {
+            PlayerData pd = Database.findData(args[0]);
             if (pd == null) {
                 Log.info("Player not found. Search by name applies only on online players.");
                 return;
@@ -519,26 +519,26 @@ public class Main extends Plugin {
             Log.info(pd.toString());
         });
 
-        handler.register("w-spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", arg -> {
+        handler.register("w-spawn", "<mob_name> <count> <playerName> [team] ", "Spawn mob in player position.", args -> {
             if (playerGroup.size() == 0) {
                 Log.info("There is no one logged, why bother spawning units?");
             }
-            UnitType unitType = Factory.getUnitByName(arg[0]);
+            UnitType unitType = Factory.getUnitByName(args[0]);
             if (unitType == null) {
-                Log.info(arg[0] + " is not valid unit.");
+                Log.info(args[0] + " is not valid unit.");
                 return;
             }
-            if (isNotInteger(arg[1])) {
+            if (isNotInteger(args[1])) {
                 Log.info("count has to be integer.");
                 return;
             }
-            int count = Integer.parseInt(arg[1]);
-            Player player = findPlayer(arg[2]);
+            int count = Integer.parseInt(args[1]);
+            Player player = findPlayer(args[2]);
             if (player == null) {
                 Log.info("Player not found.");
                 return;
             }
-            Team team = arg.length > 3 ? getTeamByName(arg[3]) : Team.crux;
+            Team team = args.length > 3 ? getTeamByName(args[3]) : Team.crux;
             for (int i = 0; i < count; i++) {
                 BaseUnit unit = unitType.create(team);
                 unit.set(player.x, player.y);
@@ -546,23 +546,23 @@ public class Main extends Plugin {
             }
         });
 
-        handler.register("w-map-stats","Shows all maps with statistics.",arg-> Log.info(mapManager.statistics()));
+        handler.register("w-map-stats","Shows all maps with statistics.",args-> Log.info(mapManager.statistics()));
 
-        handler.register("w-map-cleanup","Removes data about already removed maps.",arg->{
+        handler.register("w-map-cleanup","Removes data about already removed maps.",args->{
             mapManager.cleanup();
             Log.info("Data removed");
         });
 
         handler.register("w-apply-config","[factory/test/general/ranks]", "Applies the factory configuration,settings and " +
-                "loads test quescions.", arg -> {
-            if(arg.length==0){
+                "loads test quescions.", args -> {
+            if(args.length==0){
                 factory.config();
                 config();
                 tester.loadQuestions();
                 dataBase.loadRanks();
                 return;
             }
-            switch (arg[0]){
+            switch (args[0]){
                 case "factory":
                     factory.config();
                     break;
@@ -580,21 +580,21 @@ public class Main extends Plugin {
             }
         });
 
-        handler.register("w-trans-time", "[value]", "Sets transport time.", arg -> {
-            if (arg.length == 0) {
+        handler.register("w-trans-time", "[value]", "Sets transport time.", args -> {
+            if (args.length == 0) {
                 Log.info("trans-time is " + transportTime + ".");
                 return;
             }
-            if (isNotInteger(arg[0])) {
-                Log.info(arg[0] + " is not an integer.");
+            if (isNotInteger(args[0])) {
+                Log.info(args[0] + " is not an integer.");
                 return;
             }
-            transportTime = Integer.parseInt(arg[0]);
+            transportTime = Integer.parseInt(args[0]);
             Log.info("trans-time set to " + transportTime + ".");
         });
 
-        handler.register("w-autoSave", "[frequency]", "Initializes autosave or stops it.", arg -> {
-            Integer frequency = processArg(null, "Frequency", arg[0]);
+        handler.register("w-autoSave", "[frequency]", "Initializes autosave or stops it.", args -> {
+            Integer frequency = processArg(null, "Frequency", args[0]);
             if (frequency == null) return;
             if (frequency == 0) {
                 Log.info("If you want kill-server command so badly, you can open an issue on github.");
@@ -609,37 +609,38 @@ public class Main extends Plugin {
         handler.removeCommand("vote");
         handler.removeCommand("votekick");
 
-        handler.<Player>register("mkgf","[playerName]","Adds, or removes if payer is marked, griefer mark of given " +
-                        "player name.",(arg, player) ->{
+        handler.<Player>register("mkgf","[playerName] [reason...]","Adds, or removes if payer is marked, griefer mark of given " +
+                        "player name.",(args, player) ->{
             if(playerGroup.size() < 3 && !player.isAdmin) {
                 player.sendMessage(prefix+"At least 3 players are needed to mark a griefer.");
                 return;
             }
-            if(arg.length == 0) {
+            if(args.length == 0) {
                 player.sendMessage(getPlayerList());
                 return;
             }
-            Package p=actionManager.verify(player,arg[0],0,false);
+            actionManager.reason=args.length==2 ? args[1] : "Reason not provided";
+            Package p=actionManager.verify(player,args[0],0,false);
             if(p==null) return;
             vote.aVote(actionManager,p,"[pink]"+p.object+"[] griefer mark on/of [pink]"+((PlayerData)p.obj).originalName+"[]");
         });
 
-        handler.<Player>register("emergency","[off]","Starts emergency.For admins only.",(arg, player) ->{
+        handler.<Player>register("emergency","[off]","Starts emergency.For admins only.",(args, player) ->{
             if(!player.isAdmin){
                 player.sendMessage(prefix+"Only admin can start or disable emergency.");
                 return;
             }
-            actionManager.switchEmergency(arg.length==1);
+            actionManager.switchEmergency(args.length==1);
         });
 
         handler.<Player>register("maps","[page/rate/info/rules] [mapName/mapIdx/1-10]","Displays list maps,rates current map or " +
                         "display information about current or chosen map.",
-                (arg, player) -> {
+                (args, player) -> {
             Integer page;
-            if(arg.length>0){
-                if(arg[0].equals("info") || arg[0].equals("rules")){
-                    String stats=arg[0].equals("rules") ? mapManager.getMapRules(arg.length==2 ? arg[1]:null):
-                            mapManager.getMapStats(arg.length==2 ? arg[1]:null);
+            if(args.length>0){
+                if(args[0].equals("info") || args[0].equals("rules")){
+                    String stats=args[0].equals("rules") ? mapManager.getMapRules(args.length==2 ? args[1]:null):
+                            mapManager.getMapStats(args.length==2 ? args[1]:null);
                     if(stats==null){
                         player.sendMessage(prefix+"Map not found.");
                         return;
@@ -647,15 +648,15 @@ public class Main extends Plugin {
                     Call.onInfoMessage(player.con,stats);
                     return;
                 }
-                if(arg[0].equals("rate")){
-                    if(notEnoughArgs(player,2,arg)) return;
-                    Integer rating=processArg(player,"rating",arg[1]);
+                if(args[0].equals("rate")){
+                    if(notEnoughArgs(player,2,args)) return;
+                    Integer rating=processArg(player,"rating",args[1]);
                     if(rating==null) return;
                     rating= Mathf.clamp(rating,1,10);
                     mapManager.rate(player,rating);
                     return;
                 }
-                page=processArg(player,"Page",arg[0]);
+                page=processArg(player,"Page",args[0]);
                 if(page==null)return;
             }else {
                 page=1;
@@ -664,9 +665,9 @@ public class Main extends Plugin {
         });
 
         handler.<Player>register("l", "<fill/use/info> [itemName/all] [itemAmount]",
-                "Fill loadout with resources from core/send resources from loadout to core.", (arg, player) -> {
+                "Fill loadout with resources from core/send resources from loadout to core.", (args, player) -> {
             boolean use;
-            switch (arg[0]){
+            switch (args[0]){
                 case "info":
                     Call.onInfoMessage(player.con, loadout.info());
                     return;
@@ -677,15 +678,15 @@ public class Main extends Plugin {
                     use=false;
                     break;
                 default:
-                    invalidArg(player, arg[0]);
+                    invalidArg(player, args[0]);
                     return;
             }
-            if(notEnoughArgs(player,3,arg)) return;
+            if(notEnoughArgs(player,3,args)) return;
 
-            Integer amount=processArg(player,"Item amount",arg[2]);
+            Integer amount=processArg(player,"Item amount",args[2]);
             if(amount==null)return;
 
-            Package p = loadout.verify(player, arg[1], amount, use);
+            Package p = loadout.verify(player, args[1], amount, use);
             if (p == null) return;
 
             vote.aVote(loadout, p, "launch [orange]" +
@@ -695,16 +696,16 @@ public class Main extends Plugin {
 
         handler.<Player>register("f", "<build/send/info/price> [unitName/all] [unitAmount]",
                 "Build amount of unit or Send amount of units from hangar.",
-                (arg, player) -> {
+                (args, player) -> {
             boolean send;
-            switch (arg[0]){
+            switch (args[0]){
                 case "info":
                     Call.onInfoMessage(player.con, factory.info());
                     return;
                 case "price":
-                    if(notEnoughArgs(player,2,arg)) return;
-                    int amount = arg.length == 2 || isNotInteger(arg[2]) ? 1 : Integer.parseInt(arg[2]);
-                    Call.onInfoMessage(player.con, factory.price(player, arg[1], amount));
+                    if(notEnoughArgs(player,2,args)) return;
+                    int amount = args.length == 2 || isNotInteger(args[2]) ? 1 : Integer.parseInt(args[2]);
+                    Call.onInfoMessage(player.con, factory.price(player, args[1], amount));
                     return;
                 case "send":
                     send=true;
@@ -713,18 +714,18 @@ public class Main extends Plugin {
                     send=false;
                     break;
                 default:
-                    invalidArg(player,arg[0]);
+                    invalidArg(player,args[0]);
                     return;
             }
-            if( notEnoughArgs(player,3,arg)) return;
+            if( notEnoughArgs(player,3,args)) return;
 
-            Integer amount=processArg(player,"Unit amount",arg[2]);
+            Integer amount=processArg(player,"Unit amount",args[2]);
             if(amount==null)return;
 
-            Package p = factory.verify(player, arg[1],amount, send);
+            Package p = factory.verify(player, args[1],amount, send);
             if (p == null) return;
 
-            vote.aVote(factory, p, arg[0] + " " + report(p.object, p.amount) + " units");
+            vote.aVote(factory, p, args[0] + " " + report(p.object, p.amount) + " units");
         });
 
         handler.<Player>register("build-core", "<small/normal/big>", "Makes new core.",
@@ -917,8 +918,8 @@ public class Main extends Plugin {
         handler.<Player>register("test","<start/egan/quit/numberOfOption>","Complete the test to " +
                         "become verified player.",(args, player) -> tester.processAnswer(player,args[0]));
 
-        handler.<Player>register("set-rank","<playerName/uuid/ID> <rank/restart>","Command for admins.",(args,player)->{
-            switch (Database.setRankViaCommand(args[0],args[1],false)){
+        handler.<Player>register("set-rank","<playerName/uuid/ID> <rank/restart> [reason...]","Command for admins.",(args,player)->{
+            switch (Database.setRankViaCommand(player,args[0],args[1],args.length==3 ? args[2] : null)){
                 case notFound:
                     player.sendMessage(prefix+"Player not found");
                     break;

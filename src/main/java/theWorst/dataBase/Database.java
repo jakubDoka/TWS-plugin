@@ -16,6 +16,7 @@ import mindustry.type.ItemStack;
 import mindustry.world.blocks.storage.CoreBlock;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import theWorst.BotThread;
 import theWorst.Hud;
 import theWorst.Main;
 import theWorst.Package;
@@ -405,21 +406,35 @@ public class Database implements Votable, LoadSave {
         success
     }
 
-    public static Res setRankViaCommand(String target,String rank,boolean terminal){
-
+    public static Res setRankViaCommand(Player player, String target, String rank, String reason){
         PlayerData pd = Database.findData(target);
         if (pd == null) {
             return Res.notFound;
         }
-        if (!terminal && pd.trueRank.isAdmin){
-            return Res.notPermitted;
+        String by = "terminal";
+        if (player!=null ){
+            by=player.name;
+            if (pd.trueRank.isAdmin) {
+                return Res.notPermitted;
+            }
         }
         try {
             Rank r=Rank.valueOf(rank);
-            if(!terminal && r.isAdmin){
+            if(player!=null && r.isAdmin){
                 return Res.notPermitted;
             }
+            if(reason==null){
+                reason="Reason not provided.";
+            }
+            if(player==null){
+
+            }
+            Rank prevRank = pd.trueRank;
             Database.setRank(pd,r );
+            if(BotThread.log!=null){
+                BotThread.log.sendMessage(String.format("%s (%d) %s -> %s \n-by: %s \n-reason: %s",
+                        pd.originalName,pd.serverId,prevRank.name(),r.name(),by,reason));
+            }
             Log.info("Rank of player " + pd.originalName + " is now " + pd.rank.name() + ".");
             Call.sendMessage("Rank of player [orange]"+ pd.originalName+"[] is now " +pd.rank.getName() +".");
         } catch (IllegalArgumentException e) {
@@ -439,6 +454,7 @@ public class Database implements Votable, LoadSave {
                 }
             }
         }
+
         Player found = playerGroup.find(p->p.con.address.equals(pd.ip));
         if (found == null) {
             found = playerGroup.find(p-> p.uuid.equalsIgnoreCase(target));

@@ -21,6 +21,7 @@ import static mindustry.Vars.*;
 public class ActionManager implements Votable, Interruptible {
     TileInfo[][] data;
     Emergency emergency= new Emergency();
+    String reason;
 
     public ActionManager(){
         Events.on(mindustry.game.EventType.PlayEvent.class, e->{
@@ -101,6 +102,7 @@ public class ActionManager implements Votable, Interruptible {
     @Override
     public void launch(Package p) {
         PlayerData pd=((PlayerData)p.obj);
+        Rank prevRank = pd.trueRank;
         if(p.object.equals("remove")){
             Call.sendMessage(Main.prefix+"[orange]"+pd.originalName+"[] lost "+ Rank.griefer.getName()+" rank.");
             pd.trueRank=Rank.newcomer;
@@ -111,6 +113,10 @@ public class ActionManager implements Votable, Interruptible {
             pd.trueRank=Rank.griefer;
             Database.bunUnBunSubNet(pd,true);
             Log.info(pd.originalName+" wos marked as griefer.");
+        }
+        if(BotThread.log!=null){
+            BotThread.log.sendMessage(String.format("**%s** (%d) **%s** -> **%s** \n**by:** %s \n**reason:** %s",
+                    pd.originalName,pd.serverId,prevRank.name(),pd.trueRank.name(),Database.getData(p.target).originalName,reason));
         }
         pd.rank=pd.trueRank;
         Player player=playerGroup.find(pl->pl.con.address.equals(pd.ip));

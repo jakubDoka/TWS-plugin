@@ -38,6 +38,7 @@ public class BotThread extends Thread{
     private final Thread mt;
     private  DiscordApi api;
     private  TextChannel linkedChannel;
+    public static TextChannel log;
     //private  TextChannel mapChannel;
     private  Role adminRole;
     public static String prefix="!";
@@ -67,6 +68,14 @@ public class BotThread extends Thread{
                 linkedChannel = null;
             } else {
                 linkedChannel = channel.get();
+            }
+
+            Optional<TextChannel> channel2 = api.getTextChannelById((String) data.get("logChannelId"));
+            if (!channel2.isPresent()) {
+                Log.info("Unable to link the log channel.");
+                log = null;
+            } else {
+                log = channel2.get();
             }
 
             /*channel = api.getTextChannelById((String) data.get("mapChannelId"));
@@ -112,6 +121,7 @@ public class BotThread extends Thread{
                     data.put("prefix","!");
                     data.put("adminRoleId","Id of administration role goes here.");
                     data.put("liveChatChannelId","Your id of channel that will serve communication between server and discord.");
+                    data.put("logChannelId","channel where bot can write information about all rank changes");
                     //data.put("mapChannelId","id of channel for map posting here");
                     return data;
                 });
@@ -130,14 +140,16 @@ public class BotThread extends Thread{
     }
 
     private void registerCommands(DiscordCommands handler) {
-        handler.registerCommand(new RoleRestrictedCommand("setrank","<name/id> <rank>") {
+        handler.registerCommand(new RoleRestrictedCommand("setrank","<name/id> <rank> [reason...]") {
             {
                 description = "Sets rank of the player, available just for admins.";
                 role = adminRole;
             }
             @Override
             public void run(CommandContext ctx) {
-                switch (Database.setRankViaCommand(ctx.args[0],ctx.args[1],false)){
+                Player player = new Player();
+                player.name=ctx.author.getName();
+                switch (Database.setRankViaCommand(player,ctx.args[0],ctx.args[1],ctx.args.length==3 ? ctx.args[2] : null)){
                     case notFound:
                         ctx.reply("Player not found.");
                         break;
