@@ -6,7 +6,6 @@ import arc.struct.Array;
 import arc.util.Log;
 import mindustry.Vars;
 import mindustry.core.GameState;
-import mindustry.core.World;
 import mindustry.entities.type.Player;
 import mindustry.game.EventType;
 import mindustry.game.Team;
@@ -23,7 +22,6 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.permission.Role;
-import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.json.simple.JSONObject;
 import theWorst.dataBase.Database;
@@ -35,26 +33,29 @@ import theWorst.helpers.MapManager;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Optional;
 
 import static mindustry.Vars.*;
 
-public class BotThread extends Thread{
+public class DiscordBot {
     public static String prefix="!";
 
-    private final Thread mt;
-    private  DiscordApi api;
+    private static   DiscordApi api;
 
     private static final HashMap<String, Role> roles = new HashMap<>();
     private static final HashMap<String, TextChannel> channels = new HashMap<>();
     private static final String configFile =Main.directory + "discordSettings.json";
 
-    public BotThread(Thread mt) {
-        this.mt = mt;
+    public DiscordBot() {
         connect();
+    }
+
+    public static void disconnect(){
+        if(api!=null){
+            api.disconnect();
+        }
     }
 
     public void connect(){
@@ -108,8 +109,6 @@ public class BotThread extends Thread{
         registerCommands(handler);
         registerRestrictedCommands(handler);
 
-        setDaemon(false);
-        start();
 
         if(channels.containsKey("linked")) {
             TextChannel linkedChannel = channels.get("linked");
@@ -173,18 +172,6 @@ public class BotThread extends Thread{
                     data.put("channels",channels);
                     return data;
                 });
-    }
-
-    @Override
-    public void run() {
-        while (this.mt.isAlive()){
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        api.disconnect();
     }
 
     private void registerCommands(DiscordCommands handler) {
@@ -347,7 +334,7 @@ public class BotThread extends Thread{
             }
         });
     }
-
+    private MapParser mapParser = new MapParser();
     private void registerRestrictedCommands(DiscordCommands handler){
         Role admin = roles.get("admin");
 
@@ -370,12 +357,19 @@ public class BotThread extends Thread{
                     String path="config/maps/"+a.getFileName();
                     Tools.downloadFile(a.downloadAsInputStream(),path);
                     Map published = MapIO.createMap(new Fi(path),true);
+
                     EmbedBuilder eb = new EmbedBuilder()
                             .setTitle(published.name())
                             .setAuthor(published.author())
-                            .setDescription(published.description()+"\n**Added to server by"+ctx.author.getName()+"**");
+                            .setDescription(published.description()+"\n**Added to server by"+ctx.author.getName()+"**")
+                            .setThumbnail(mapParser.parseMap(a.downloadAsInputStream()).image);
+
                     maps.reload();
-                    ctx.channel.sendMessage(eb,new File(path));
+                    if(channels.containsKey("maps")){
+                        channels.get("maps").sendMessage(eb,new File(path));
+                    }else {
+                        ctx.channel.sendMessage(eb,new File(path));
+                    }
                 } catch (IOException ex){
                     ctx.reply("I em unable to upload map.");
                     ex.printStackTrace();
