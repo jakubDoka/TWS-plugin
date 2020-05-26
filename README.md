@@ -6,7 +6,7 @@ This plugin implements loadout system.Players can launch resources and store the
 Plugin also implements a unit factory witch aleuts players to units from resources from loadout. 
 Then there is also command for building cores for resources.
 
-Plugin will create a default config and save file. In a config ,you can set up witch units can be built, 
+Plugin will create a default config and save file. In a config ,you can set up which units can be built, 
 how mutch will they cost and speed of building. Save saves the loadout and factory progress.
 
 ### Building a Jar
