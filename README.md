@@ -7,11 +7,11 @@ Plugin also implements a unit factory witch aleuts players to units from resourc
 Then there is also command for building cores for resources.
 
 Plugin will create a default config and save file. In a config ,you can set up witch units can be built, 
-how match will they cost and speed of building. Save saves the loadout and factory progress.
+how mutch will they cost and speed of building. Save saves the loadout and factory progress.
 
 ### Building a Jar
 
-`gradlew jar` / `./gradlew jar`
+CMD to your plugin folder and use `gradlew jar`(windows) `./gradlew jar`(Linux/MacOs)
 
 Output jar should be in `build/libs`.
 
@@ -22,5 +22,5 @@ List your currently installed plugins/mods by running the `mods` command.
 
 ### Bugs
 
-This plugin is far from done and can contain some bugs, if you find some please report them in issues.
+This plugin is far from done and can contain some bugs, if you find some please report them in [here](https://github.com/jakubDoka/TWS-plugin/issues/new).
 The best way to report bug is explanation of how to recreate it.
