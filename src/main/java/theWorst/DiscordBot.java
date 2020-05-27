@@ -357,7 +357,7 @@ public class DiscordBot {
                 StringBuilder mb = new StringBuilder();
                 int shown = 0;
                 int begin = Math.max(0,res.size-20);
-                for (int i = begin; i <res.size; i--) {
+                for (int i = begin; i <res.size; i++) {
                     String line =Tools.cleanColors(res.get(i));
                     if(mb.length()+line.length()>maxMessageLength) break;
                     shown++;
@@ -408,7 +408,7 @@ public class DiscordBot {
     private void registerRestrictedCommands(DiscordCommands handler){
         Role admin = roles.get("admin");
 
-        handler.registerCommand(new RoleRestrictedCommand("setrolerestrict","<command> <role>") {
+        handler.registerCommand(new RoleRestrictedCommand("setrolerestrict","<command> <role...>") {
             {
                 description = "Sets role of role restricted command.";
                 role = admin;
