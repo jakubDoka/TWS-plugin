@@ -419,12 +419,17 @@ public class DiscordBot {
                     ctx.reply("Invalid command. It has to exist and be role restricted.");
                     return;
                 }
-                if(roles.containsKey(ctx.args[1])){
+                StringBuilder roleName = new StringBuilder();
+                for(int i=1;i<ctx.args.length;i++){
+                    roleName.append(ctx.args[i]);
+                }
+                if(roles.containsKey(roleName.toString())){
                     ctx.reply("this role does not exist.Available roles"+roles.keySet().toString());
                     return;
                 }
                 ((RoleRestrictedCommand)handler.commands.get(ctx.args[0])).role=roles.get(ctx.args[1]);
-                ctx.reply(String.format("Role of %s is now %s.", ctx.args[0],ctx.args[1]));
+
+                ctx.reply(String.format("Role of %s is now %s.", ctx.args[0],roleName.toString()));
             }
         });
 
