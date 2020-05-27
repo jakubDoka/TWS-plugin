@@ -171,6 +171,7 @@ public class Database implements Votable, LoadSave {
                     Call.sendMessage(Main.prefix+"[orange]"+p.name+"[] is not "+pd.rank.getName()+" anymore.");
                     pd.rank=pd.trueRank;
                     updateName(p,pd);
+                    p.isAdmin=pd.trueRank.isAdmin;
                 }
             }
         },0,60);
